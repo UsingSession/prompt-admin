@@ -1,0 +1,72 @@
+# Version control
+.git/
+.gitignore
+.gitattributes
+
+# GitHub configuration
+.github/
+
+# Python cache and compiled files
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Test and quality tool caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Tests are not required in the runtime image
+tests/
+
+# Local environment and secrets
+.env
+.env.*
+*.pem
+*.key
+
+# IDE settings
+.idea/
+.vscode/
+*.code-workspace
+
+# Operating system files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs and temporary files
+*.log
+logs/
+tmp/
+temp/
+
+# Local database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Local build artifacts
+build/
+dist/
+*.egg-info/
+
+# Documentation not required at runtime
+docs/
+*.md
+
+# Docker Compose files are not required inside the image
+docker-compose.yml
+docker-compose.*.yml
+compose.yml
+compose.*.yml

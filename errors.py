@@ -1,0 +1,2 @@
+class PromptAdminError(ValueError):
+    pass

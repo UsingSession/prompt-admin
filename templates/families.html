@@ -1,0 +1,113 @@
+<section class="page-header">
+  <div>
+    <p class="eyebrow">Prompt group management</p>
+    <h1>Prompt Families</h1>
+    <p class="page-description">Create logical prompt groups and attach existing system prompts without renaming their prompt keys.</p>
+  </div>
+  <div class="page-actions">
+    <a class="button" href="/family-new">New family</a>
+  </div>
+</section>
+
+<section class="stats-grid">
+  <div class="stat-card">
+    <span>Families</span>
+    <strong>$family_count</strong>
+  </div>
+</section>
+
+<section class="panel filters-panel">
+  <form method="get" action="/family" class="filters-form family-filter-form" data-family-filter-form>
+    <label class="family-filter-field">
+      Select family
+      <select name="key" data-family-filter-select data-selected="$query">
+        <option value="">All families</option>
+      </select>
+    </label>
+    <button type="submit">Open family</button>
+    <a class="button secondary" href="/families">Reset</a>
+  </form>
+</section>
+
+<section class="panel">
+  <div class="table-wrap">
+    <table class="data-table row-hover-table">
+      <thead>
+        <tr>
+          <th>Family key</th>
+          <th>Description</th>
+          <th>Prompts</th>
+          <th>Updated</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>$rows_html</tbody>
+    </table>
+  </div>
+</section>
+
+<script>
+(function () {
+  const form = document.querySelector("[data-family-filter-form]");
+  const select = document.querySelector("[data-family-filter-select]");
+
+  if (!form || !select) {
+    return;
+  }
+
+  const selectedValue = select.dataset.selected || "";
+
+  function addOption(value, label, isLegacyFilter) {
+    if (!value || Array.from(select.options).some((option) => option.value === value)) {
+      return;
+    }
+
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label || value;
+    option.selected = value === selectedValue;
+
+    if (isLegacyFilter) {
+      option.dataset.legacyFilter = "true";
+    }
+
+    select.appendChild(option);
+  }
+
+  function addFamilyOptionsFromDocument(documentContext) {
+    documentContext
+      .querySelectorAll('a[href^="/family?key="] code')
+      .forEach((element) => addOption(element.textContent.trim()));
+  }
+
+  addFamilyOptionsFromDocument(document);
+
+  if (selectedValue) {
+    addOption(selectedValue, `Current filter: ${selectedValue}`, true);
+  }
+
+  fetch("/families")
+    .then((response) => response.text())
+    .then((html) => {
+      const parser = new DOMParser();
+      const documentContext = parser.parseFromString(html, "text/html");
+      addFamilyOptionsFromDocument(documentContext);
+    })
+    .catch(() => {});
+
+  form.addEventListener("submit", function (event) {
+    const selectedOption = select.selectedOptions[0];
+
+    if (!select.value) {
+      event.preventDefault();
+      window.location.href = "/families";
+      return;
+    }
+
+    if (selectedOption && selectedOption.dataset.legacyFilter === "true") {
+      event.preventDefault();
+      window.location.href = `/families?q=${encodeURIComponent(select.value)}`;
+    }
+  });
+}());
+</script>

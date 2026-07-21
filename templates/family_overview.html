@@ -1,0 +1,45 @@
+<section class="page-header">
+  <div>
+    <p class="eyebrow">Prompt family overview</p>
+    <h1><code>$family_key</code></h1>
+    <p class="page-description">Family is a logical group of independent prompts, not a revision chain.</p>
+  </div>
+  <div class="page-actions">
+    <a class="button secondary" href="/families">Back to families</a>
+    <a class="button secondary" href="/family-edit?key=$url_key">Edit family</a>
+  </div>
+</section>
+
+<section class="stats-grid">
+  <div class="stat-card">
+    <span>Prompts</span>
+    <strong>$prompt_count</strong>
+  </div>
+  <div class="stat-card">
+    <span>Last item #</span>
+    <strong>#$max_item</strong>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Description</h2>
+  <p class="family-description">$description</p>
+</section>
+
+<section class="panel">
+  <div class="table-wrap">
+    <table class="data-table row-hover-table">
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>Prompt key</th>
+          <th>Category</th>
+          <th>Status</th>
+          <th>Updated</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>$rows_html</tbody>
+    </table>
+  </div>
+</section>

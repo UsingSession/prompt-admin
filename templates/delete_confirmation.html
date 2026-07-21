@@ -1,0 +1,18 @@
+<section class="page-header">
+  <div>
+    <p class="eyebrow">Delete prompt</p>
+    <h1>Confirm deletion</h1>
+    <p class="page-description">
+      This removes the active prompt record from PostgreSQL.
+    </p>
+  </div>
+</section>
+
+<div class="panel delete-panel">
+  <p>Delete prompt <code>$prompt_key</code>?</p>
+  <form method="post" action="/delete" class="form-actions">
+    <input type="hidden" name="prompt_key" value="$prompt_key">
+    <button class="danger" type="submit">Delete prompt</button>
+    <a class="button secondary" href="/edit?key=$url_key">Cancel</a>
+  </form>
+</div>

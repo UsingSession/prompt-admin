@@ -1,0 +1,56 @@
+<section class="page-header">
+  <div>
+    <p class="eyebrow">Prompt family editor</p>
+    <h1>Prompt Family</h1>
+    <p class="page-description">Create a logical group for related system prompts. Existing prompts can be attached from their edit form.</p>
+  </div>
+  <div class="page-actions">
+    <a class="button secondary" href="/families">Back to families</a>
+  </div>
+</section>
+
+$error_html
+
+<section class="editor-layout">
+  <form id="family-form" method="post" action="/family-save" class="panel editor-panel">
+    <div class="field-group">
+      <label for="family_key">Family key</label>
+      <input id="family_key" name="family_key" value="$family_key" $readonly_attr required>
+      <p class="help-text">Logical family ID. Example: <code>image_generation</code>, <code>script_writer</code>. This is not the runtime prompt key.</p>
+    </div>
+
+    <div class="field-group">
+      <label for="description">Description</label>
+      <textarea id="description" name="description" class="family-description-textarea" rows="8">$description</textarea>
+      <p class="help-text">Human-facing notes about what this group is for. It is not sent to the LLM.</p>
+    </div>
+  </form>
+
+  <aside class="panel side-panel">
+    <h2>Family info</h2>
+    <dl class="meta-list">
+      <div>
+        <dt>Prompts</dt>
+        <dd>$prompt_count</dd>
+      </div>
+      <div>
+        <dt>Last item #</dt>
+        <dd>#$max_version</dd>
+      </div>
+      <div>
+        <dt>Storage</dt>
+        <dd>PostgreSQL</dd>
+      </div>
+    </dl>
+
+    <details class="action-card" open>
+      <summary>Form actions</summary>
+      <div class="stack-actions">
+        <button type="submit" form="family-form">Save family</button>
+        <a class="button secondary" href="/families">Cancel</a>
+      </div>
+    </details>
+
+    $family_delete_actions_html
+  </aside>
+</section>

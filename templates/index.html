@@ -1,0 +1,84 @@
+<section class="page-header">
+  <div>
+    <p class="eyebrow">PostgreSQL prompt storage</p>
+    <h1>System Prompts</h1>
+    <p class="page-description">
+      Edit active system prompts used by n8n workflows.
+    </p>
+  </div>
+  <div class="page-actions">
+    <a class="button" href="/new">New prompt</a>
+    <a class="button secondary" href="/import">Import JSON</a>
+    <a class="button secondary" href="/export">Export JSON</a>
+    <a class="button secondary" href="/deleted">Deleted</a>
+  </div>
+</section>
+
+<section class="stats-grid">
+  <div class="stat-card">
+    <span>Prompts</span>
+    <strong>$prompt_count</strong>
+  </div>
+  <div class="stat-card">
+    <span>Active</span>
+    <strong>$active_count</strong>
+  </div>
+  <div class="stat-card">
+    <span>Total lines</span>
+    <strong>$total_lines</strong>
+  </div>
+  <div class="stat-card">
+    <span>Total chars</span>
+    <strong>$total_chars</strong>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <h2>Prompt records</h2>
+      <p>Source of truth: <code>ai_system_prompts</code>.</p>
+    </div>
+  </div>
+
+  <form class="filter-form" method="get" action="/">
+    <div class="filter-field">
+      <label for="category">Category</label>
+      <select id="category" name="category">
+        $category_options
+      </select>
+    </div>
+    <div class="filter-field">
+      <label for="status">Status</label>
+      <select id="status" name="status">
+        <option value="all" $status_all_selected>All</option>
+        <option value="active" $status_active_selected>Active</option>
+        <option value="inactive" $status_inactive_selected>Inactive</option>
+      </select>
+    </div>
+    <div class="filter-field filter-search">
+      <label for="q">Search</label>
+      <input id="q" name="q" value="$query" placeholder="prompt key, description, category">
+    </div>
+    <div class="filter-actions">
+      <button type="submit">Apply</button>
+      <a class="button secondary" href="/">Reset</a>
+    </div>
+  </form>
+
+  <div class="table-wrap">
+    <table class="data-table row-hover-table">
+      <thead>
+        <tr>
+          <th>Prompt key</th>
+          <th>Category</th>
+          <th>Status</th>
+          <th>Size</th>
+          <th>Updated</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>$rows_html</tbody>
+    </table>
+  </div>
+</section>

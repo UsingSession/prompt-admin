@@ -1,0 +1,104 @@
+<section class="page-header">
+  <div>
+    <p class="eyebrow">Hook editor</p>
+    <h1>Prompt Hook</h1>
+    <p class="page-description">
+      Create reusable rule blocks and insert them into prompts with placeholders like <code>#hook_global_rules</code>.
+    </p>
+  </div>
+  <div class="page-actions">
+    <a class="button secondary" href="/hooks">Back to hooks</a>
+  </div>
+</section>
+
+$error_html
+$validation_html
+
+<section class="editor-layout">
+  <form id="hook-form" method="post" action="/hook-save" class="panel editor-panel">
+    <div class="field-group">
+      <label for="hook_key">Hook key</label>
+      <input id="hook_key" name="hook_key" value="$hook_key" $readonly_attr required>
+      <p class="help-text">Unique hook ID. Recommended format: <code>hook_global_rules-simple_english</code>. This field is not used for matching placeholders.</p>
+    </div>
+
+    <div class="field-group two-columns">
+      <div>
+        <label for="hook_group">Hook group</label>
+        <div class="prefixed-input">
+          <span class="input-prefix">hook_</span>
+          <input id="hook_group" name="hook_group" value="$hook_group" required>
+        </div>
+        <p class="help-text">Enter only the group suffix, for example <code>global_rules</code>. It will be stored as <code>hook_global_rules</code> and used by prompt placeholder <code>#hook_global_rules</code>.</p>
+      </div>
+      <div>
+        <label for="priority">Priority</label>
+        <input id="priority" name="priority" value="$priority">
+        <p class="help-text">Lower values are inserted first inside the same hook group. Example: <code>10</code>, <code>20</code>, <code>100</code>.</p>
+      </div>
+    </div>
+
+    <div class="field-group two-columns">
+      <div>
+        <label for="category">Category</label>
+        <input id="category" name="category" value="$category">
+        <p class="help-text">Optional UI grouping only. Example: <code>language</code>, <code>rag</code>, <code>output_format</code>.</p>
+      </div>
+      <label class="checkbox-field">
+        <input type="checkbox" name="is_active" value="1" $checked_attr>
+        Active
+      </label>
+    </div>
+
+    <div class="field-group">
+      <label for="description">Description</label>
+      <input id="description" name="description" value="$description">
+      <p class="help-text">Short note for humans. It is not inserted into the compiled prompt.</p>
+    </div>
+
+    <div class="field-group text-editor-field">
+      <div class="field-header">
+        <label for="hook_content">Hook content</label>
+        <span class="field-hint">Reusable plain text block</span>
+      </div>
+      <div class="editor-toolbar" role="toolbar" aria-label="Hook editing shortcuts">
+        <button type="button" data-insert-target="hook_content" data-snippet="## Rule group\n\n">Heading</button>
+        <button type="button" data-insert-target="hook_content" data-snippet="- Rule\n- Rule\n">List</button>
+        <button type="button" data-insert-target="hook_content" data-snippet="```text\n\n```\n">Code block</button>
+        <button type="button" data-insert-target="hook_content" data-snippet="```json\n{\n  &quot;key&quot;: &quot;value&quot;\n}\n```\n">JSON block</button>
+        <button type="button" data-insert-target="hook_content" data-snippet="## Rule\n\n- ">Rule block</button>
+      </div>
+      <textarea id="hook_content" name="hook_content" class="prompt-textarea" spellcheck="false">$hook_content</textarea>
+      <p class="help-text">Reusable rule text inserted into prompts when the matching placeholder is found.</p>
+    </div>
+  </form>
+
+  <aside class="panel side-panel">
+    <h2>Hook info</h2>
+    <dl class="meta-list">
+      <div>
+        <dt>Lines</dt>
+        <dd>$line_count</dd>
+      </div>
+      <div>
+        <dt>Characters</dt>
+        <dd>$char_count</dd>
+      </div>
+      <div>
+        <dt>Storage</dt>
+        <dd>PostgreSQL</dd>
+      </div>
+    </dl>
+
+    <details class="action-card" open>
+      <summary>Form actions</summary>
+      <div class="stack-actions">
+        <button type="submit" form="hook-form">Save hook</button>
+        <button type="submit" form="hook-form" formaction="/hook-validate">Validate</button>
+        <a class="button secondary" href="/hooks">Cancel</a>
+      </div>
+    </details>
+
+    $hook_actions_html
+  </aside>
+</section>

@@ -1,0 +1,21 @@
+<tr>
+  <td>$item_type</td>
+  <td><code>$item_key</code></td>
+  <td>$deleted_at</td>
+  <td>
+    <div class="row-actions">
+      <form method="post" action="$restore_action">
+        <input type="hidden" name="prompt_key" value="$item_key">
+        <input type="hidden" name="family_key" value="$item_key">
+        <input type="hidden" name="hook_key" value="$item_key">
+        <button class="secondary" type="submit">Restore</button>
+      </form>
+      <form method="post" action="$purge_action">
+        <input type="hidden" name="prompt_key" value="$item_key">
+        <input type="hidden" name="family_key" value="$item_key">
+        <input type="hidden" name="hook_key" value="$item_key">
+        <button class="danger" type="submit">Delete permanently</button>
+      </form>
+    </div>
+  </td>
+</tr>

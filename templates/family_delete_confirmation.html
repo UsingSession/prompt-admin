@@ -1,0 +1,19 @@
+<section class="page-header">
+  <div>
+    <p class="eyebrow">Delete prompt family</p>
+    <h1>Confirm deletion</h1>
+    <p class="page-description">
+      This removes the active family record from PostgreSQL. It does not delete prompts.
+    </p>
+  </div>
+</section>
+
+<div class="panel delete-panel">
+  <p>Delete family <code>$family_key</code>?</p>
+  <p class="help-text">Attached prompts: $prompt_count. A family can be deleted only after attached prompts are detached or deleted.</p>
+  <form method="post" action="/family-delete" class="form-actions">
+    <input type="hidden" name="family_key" value="$family_key">
+    <button class="danger" type="submit">Delete family</button>
+    <a class="button secondary" href="/family-edit?key=$url_key">Cancel</a>
+  </form>
+</div>

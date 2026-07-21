@@ -1,0 +1,16 @@
+<section class="page-header">
+  <div>
+    <p class="eyebrow">Soft delete</p>
+    <h1>Delete Hook</h1>
+    <p class="page-description">This will hide the hook from the active list. It can be restored later.</p>
+  </div>
+</section>
+
+<section class="panel delete-panel">
+  <p>Delete hook <code>$hook_key</code>?</p>
+  <form method="post" action="/hook-delete" class="form-actions">
+    <input type="hidden" name="hook_key" value="$hook_key">
+    <button class="danger" type="submit">Delete</button>
+    <a class="button secondary" href="/hook-edit?key=$url_key">Cancel</a>
+  </form>
+</section>

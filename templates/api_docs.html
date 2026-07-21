@@ -1,0 +1,312 @@
+<section class="page-header">
+  <div>
+    <p class="eyebrow">Runtime prompt provider</p>
+    <h1>Compiled Prompts API</h1>
+    <p class="page-description">
+      Load active prompts from Prompt Admin with hook placeholders already resolved before n8n calls an LLM.
+    </p>
+  </div>
+  <div class="page-actions">
+    <a class="button" href="/api/prompts/compiled?keys=script_writer">Try JSON</a>
+  </div>
+</section>
+
+<section class="api-hero">
+  <div class="api-hero-main">
+    <span class="badge">JSON endpoint</span>
+    <h2><code>GET /api/prompts/compiled</code></h2>
+    <p>
+      The endpoint compiles prompts through the same hook resolver used by the preview page and returns JSON for workflow runtime usage.
+    </p>
+  </div>
+  <div class="api-hero-side">
+    <div>
+      <span>Runtime field</span>
+      <strong><code>compiled_prompt</code></strong>
+    </div>
+    <div>
+      <span>Returned records</span>
+      <strong>active prompts only</strong>
+    </div>
+    <div>
+      <span>Hook behavior</span>
+      <strong>active hooks inserted</strong>
+    </div>
+  </div>
+</section>
+
+<section class="api-grid">
+  <article class="panel api-card">
+    <span class="api-card-label">Docker / n8n URL</span>
+    <h2>Use inside n8n</h2>
+    <pre><code>http://prompt-admin:8090/api/prompts/compiled</code></pre>
+    <p>Use this URL from an n8n HTTP Request node inside the Docker Compose network.</p>
+  </article>
+
+  <article class="panel api-card">
+    <span class="api-card-label">Host URL</span>
+    <h2>Test in browser</h2>
+    <pre><code>http://localhost:8090/api/prompts/compiled</code></pre>
+    <p>Use this URL from the host machine browser or local curl command.</p>
+  </article>
+</section>
+
+<section class="panel api-section">
+  <div class="panel-header">
+    <div>
+      <h2>API contract</h2>
+      <p>Prompt Admin owns prompt compilation. n8n should not query PostgreSQL directly.</p>
+    </div>
+  </div>
+  <ul class="api-notes">
+    <li>PostgreSQL is the source of truth for prompts, hooks, and families.</li>
+    <li>This runtime endpoint returns compiled prompt text for active prompts only.</li>
+    <li>Inactive and soft-deleted prompts are intentionally excluded.</li>
+    <li>Prompt-level <code>description</code> is intentionally not returned.</li>
+    <li>Hook <code>description</code> is returned only as resolved-hook metadata.</li>
+    <li>Prompt families are UI grouping metadata, not a runtime selection API.</li>
+    <li>n8n should select prompts by stable <code>prompt_key</code> or <code>category</code>.</li>
+  </ul>
+</section>
+
+<section class="panel api-section">
+  <div class="panel-header">
+    <div>
+      <h2>Request modes</h2>
+      <p>Choose category loading, key loading, or a combined filter.</p>
+    </div>
+  </div>
+
+  <div class="api-mode-grid">
+    <article class="api-mode-card">
+      <span class="api-method">GET</span>
+      <h3>By category</h3>
+      <p>Load all active prompts from one category.</p>
+      <pre><code>http://prompt-admin:8090/api/prompts/compiled?category=image_generation</code></pre>
+    </article>
+
+    <article class="api-mode-card">
+      <span class="api-method">GET</span>
+      <h3>By repeated keys</h3>
+      <p>Load several specific prompts by passing multiple <code>key</code> parameters.</p>
+      <pre><code>http://prompt-admin:8090/api/prompts/compiled?key=script_writer&amp;key=tag_retrieval_planner</code></pre>
+    </article>
+
+    <article class="api-mode-card">
+      <span class="api-method">GET</span>
+      <h3>By comma-separated keys</h3>
+      <p>Load several specific prompts through one <code>keys</code> parameter.</p>
+      <pre><code>http://prompt-admin:8090/api/prompts/compiled?keys=script_writer,tag_retrieval_planner</code></pre>
+    </article>
+
+    <article class="api-mode-card">
+      <span class="api-method">GET</span>
+      <h3>Category + keys</h3>
+      <p>Return the intersection: active prompts in the category and matching the requested keys.</p>
+      <pre><code>http://prompt-admin:8090/api/prompts/compiled?category=image_generation&amp;keys=script_writer,tag_retrieval_planner</code></pre>
+    </article>
+  </div>
+</section>
+
+<section class="api-layout">
+  <article class="panel api-section">
+    <h2>n8n HTTP Request node</h2>
+    <div class="api-checklist">
+      <div><span>Method</span><strong>GET</strong></div>
+      <div><span>URL</span><strong><code>http://prompt-admin:8090/api/prompts/compiled?keys=script_writer,tag_retrieval_planner</code></strong></div>
+      <div><span>Response Format</span><strong>JSON</strong></div>
+    </div>
+  </article>
+
+  <article class="panel api-section">
+    <h2>Workflow shape</h2>
+    <ol class="api-steps">
+      <li><strong>HTTP Request</strong><span>Load compiled prompts from Prompt Admin.</span></li>
+      <li><strong>Code node</strong><span>Convert <code>prompts[]</code> into a prompt map.</span></li>
+      <li><strong>LLM node</strong><span>Use <code>prompt_map.script_writer</code> as the system prompt.</span></li>
+    </ol>
+  </article>
+</section>
+
+<section class="panel api-section">
+  <div class="panel-header">
+    <div>
+      <h2>n8n Code node</h2>
+      <p>Convert the returned prompt array into a key-value map.</p>
+    </div>
+  </div>
+  <pre><code>const promptMap = {};
+
+for (const prompt of $$json.prompts || []) {
+  promptMap[prompt.prompt_key] = prompt.compiled_prompt;
+}
+
+return [
+  {
+    json: {
+      ...$$json,
+      prompt_map: promptMap,
+    },
+  }
+];</code></pre>
+
+  <h3>Use later in n8n</h3>
+  <pre><code>{{$$json.prompt_map.script_writer}}</code></pre>
+</section>
+
+<section class="api-layout">
+  <article class="panel api-section">
+    <h2>Top-level response fields</h2>
+    <div class="table-wrap">
+      <table class="data-table compact-table">
+        <thead>
+          <tr>
+            <th>Field</th>
+            <th>Meaning</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><code>category</code></td><td>Requested category, or <code>null</code>.</td></tr>
+          <tr><td><code>keys</code></td><td>Requested prompt keys after deduplication.</td></tr>
+          <tr><td><code>missing_keys</code></td><td>Requested keys that were not returned.</td></tr>
+          <tr><td><code>count</code></td><td>Number of returned compiled prompts.</td></tr>
+          <tr><td><code>prompts[]</code></td><td>Compiled prompt records.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </article>
+
+  <article class="panel api-section">
+    <h2>Prompt record fields</h2>
+    <div class="table-wrap">
+      <table class="data-table compact-table">
+        <thead>
+          <tr>
+            <th>Field</th>
+            <th>Meaning</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><code>prompt_key</code></td><td>Stable prompt identifier used by n8n.</td></tr>
+          <tr><td><code>category</code></td><td>Prompt-level category.</td></tr>
+          <tr><td><code>is_active</code></td><td>Always <code>true</code> for returned prompts.</td></tr>
+          <tr><td><code>updated_at</code></td><td>Prompt update timestamp, or <code>null</code>.</td></tr>
+          <tr><td><code>raw_prompt</code></td><td>Original prompt text from PostgreSQL.</td></tr>
+          <tr><td><code>compiled_prompt</code></td><td>Final prompt text with hooks inserted.</td></tr>
+          <tr><td><code>detected_groups[]</code></td><td>Hook groups detected in the raw prompt.</td></tr>
+          <tr><td><code>resolved_hooks[]</code></td><td>Hooks inserted into the compiled prompt.</td></tr>
+          <tr><td><code>unresolved_groups[]</code></td><td>Hook placeholders without matching active hooks.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </article>
+</section>
+
+<section class="api-layout">
+  <article class="panel api-section">
+    <h2>Resolved hook fields</h2>
+    <div class="table-wrap">
+      <table class="data-table compact-table">
+        <thead>
+          <tr>
+            <th>Field</th>
+            <th>Meaning</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><code>hook_key</code></td><td>Stable hook identifier.</td></tr>
+          <tr><td><code>hook_group</code></td><td>Resolved placeholder group.</td></tr>
+          <tr><td><code>description</code></td><td>Human-facing hook note.</td></tr>
+          <tr><td><code>category</code></td><td>Hook category metadata.</td></tr>
+          <tr><td><code>priority</code></td><td>Hook ordering value. Lower values are inserted first.</td></tr>
+          <tr><td><code>is_active</code></td><td>Whether the hook was active when resolved.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </article>
+
+  <article class="panel api-section">
+    <h2>Runtime behavior</h2>
+    <ul class="api-notes">
+      <li>At least one of <code>category</code>, <code>key</code>, or <code>keys</code> is required.</li>
+      <li>Only active prompts are returned.</li>
+      <li>Soft-deleted prompts are not returned.</li>
+      <li>Only active hooks are inserted.</li>
+      <li>Duplicate requested keys are ignored while preserving the first occurrence.</li>
+      <li>Requested key order is preserved in <code>prompts[]</code>.</li>
+      <li><code>missing_keys</code> reports requested keys that were not returned.</li>
+      <li><code>missing_keys</code> is empty for category-only requests.</li>
+      <li>The main field for n8n is <code>compiled_prompt</code>.</li>
+    </ul>
+  </article>
+</section>
+
+<section class="api-layout">
+  <article class="panel api-section">
+    <h2>Error behavior</h2>
+    <div class="table-wrap">
+      <table class="data-table compact-table">
+        <thead>
+          <tr>
+            <th>Case</th>
+            <th>Response</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>No filter is provided</td><td><code>400</code> with an <code>error</code> field.</td></tr>
+          <tr><td>Invalid prompt key format</td><td><code>400</code> with an <code>error</code> field.</td></tr>
+          <tr><td>Prompt key exists but is inactive</td><td><code>200</code>, key listed in <code>missing_keys</code>.</td></tr>
+          <tr><td>Prompt key exists but is soft-deleted</td><td><code>200</code>, key listed in <code>missing_keys</code>.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </article>
+
+  <article class="panel api-section">
+    <h2>Related endpoints</h2>
+    <ul class="api-notes">
+      <li><code>/api-docs</code> renders this help page.</li>
+      <li><code>/healthz</code> returns service/database health JSON.</li>
+      <li><code>/export</code> downloads prompts, families, and hooks as JSON.</li>
+      <li><code>/import</code> opens the import preview/apply UI.</li>
+      <li>There is no runtime family selection API. Use stable prompt keys.</li>
+    </ul>
+  </article>
+</section>
+
+<section class="panel api-section">
+  <div class="panel-header">
+    <div>
+      <h2>Example JSON response</h2>
+      <p>Trimmed example with one compiled prompt.</p>
+    </div>
+  </div>
+  <pre><code>{
+  "category": "image_generation",
+  "keys": ["script_writer"],
+  "missing_keys": [],
+  "count": 1,
+  "prompts": [
+    {
+      "prompt_key": "script_writer",
+      "category": "image_generation",
+      "is_active": true,
+      "updated_at": "2026-07-01T06:00:00+00:00",
+      "raw_prompt": "Raw prompt with #hook_global_rules",
+      "compiled_prompt": "Prompt with hooks inserted",
+      "detected_groups": ["hook_global_rules"],
+      "resolved_hooks": [
+        {
+          "hook_key": "hook_global_rules-user_intent",
+          "hook_group": "hook_global_rules",
+          "description": "User intent preservation rule",
+          "category": "global",
+          "priority": 10,
+          "is_active": true
+        }
+      ],
+      "unresolved_groups": []
+    }
+  ]
+}</code></pre>
+</section>

@@ -1,0 +1,111 @@
+<section class="page-header">
+  <div>
+    <p class="eyebrow">Prompt editor</p>
+    <h1>System Prompt</h1>
+    <p class="page-description">
+      Create or update a system prompt stored in PostgreSQL. Prompts may include hook placeholders like <code>#hook_global_rules</code>.
+    </p>
+  </div>
+  <div class="page-actions">
+    <a class="button secondary" href="/">Back to list</a>
+  </div>
+</section>
+
+$error_html
+$validation_html
+
+<section class="editor-layout">
+  <form id="prompt-form" method="post" action="/save" class="panel editor-panel">
+    <div class="field-group">
+      <label for="prompt_key">Prompt key</label>
+      <input id="prompt_key" name="prompt_key" value="$prompt_key" $readonly_attr required>
+      <input type="hidden" name="prompt_family_key" value="$prompt_family_key">
+      <input type="hidden" name="family_version" value="$family_version">
+      <input type="hidden" name="clone_source_key" value="$clone_source_key">
+      <p class="help-text">Unique prompt ID used by n8n. Generated prompt keys are created automatically for family-item clones.</p>
+    </div>
+
+    <div class="field-group">
+      <label for="category">Category</label>
+      <input id="category" name="category" value="$category">
+      <p class="help-text">Optional UI grouping only. Example: <code>image_generation</code>, <code>work_automation</code>, <code>rag</code>.</p>
+    </div>
+
+    <div class="field-group">
+      <div class="field-header">
+        <label for="selected_prompt_family_key">Prompt family</label>
+        <span class="field-hint">Optional group</span>
+      </div>
+      <div class="prompt-family-selector-card">
+        <div class="prompt-family-selector-control">
+          <select id="selected_prompt_family_key" name="selected_prompt_family_key" class="prompt-family-select" $family_select_disabled_attr>
+            $family_options_html
+          </select>
+          $family_hidden_input_html
+        </div>
+        <div class="prompt-family-selector-meta">
+          <p class="help-text">Attach this prompt to a logical family without changing its prompt key. If this prompt is newly attached, the next available family item number is assigned on save.</p>
+          <a class="button small secondary" href="/families">Manage families</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="field-group text-editor-field">
+      <div class="field-header">
+        <label for="system_prompt">System prompt</label>
+        <span class="field-hint">Markdown-style plain text</span>
+      </div>
+      <div class="editor-toolbar" role="toolbar" aria-label="Prompt editing shortcuts">
+        <button type="button" data-insert-target="system_prompt" data-snippet="## Section\n\n">Heading</button>
+        <button type="button" data-insert-target="system_prompt" data-snippet="- Item\n- Item\n">List</button>
+        <button type="button" data-insert-target="system_prompt" data-snippet="```text\n\n```\n">Code block</button>
+        <button type="button" data-insert-target="system_prompt" data-snippet="```json\n{\n  &quot;key&quot;: &quot;value&quot;\n}\n```\n">JSON block</button>
+        <button type="button" data-insert-target="system_prompt" data-snippet="#hook_global_rules\n\n">Hook placeholder</button>
+        <button type="button" data-insert-target="system_prompt" data-snippet="## Output format\n\nReturn only valid JSON.\n">Output format</button>
+      </div>
+      <textarea id="system_prompt" name="system_prompt" class="prompt-textarea" spellcheck="false">$system_prompt</textarea>
+      <p class="help-text">Main instruction text. Add hook placeholders such as <code>#hook_global_rules</code> to insert active hooks from that group.</p>
+    </div>
+  </form>
+
+  <aside class="panel side-panel">
+    <h2>Prompt info</h2>
+    <dl class="meta-list">
+      <div>
+        <dt>Lines</dt>
+        <dd>$line_count</dd>
+      </div>
+      <div>
+        <dt>Characters</dt>
+        <dd>$char_count</dd>
+      </div>
+      <div>
+        <dt>Storage</dt>
+        <dd>PostgreSQL</dd>
+      </div>
+    </dl>
+
+    <details class="action-card" open>
+      <summary>Prompt status</summary>
+      <div class="status-card-body">
+        <label class="checkbox-field status-checkbox-field">
+          <input type="checkbox" name="is_active" value="1" form="prompt-form" $checked_attr>
+          Active
+        </label>
+        <p class="help-text">Inactive prompts stay saved but are not returned by active prompt API responses.</p>
+      </div>
+    </details>
+
+    <details class="action-card" open>
+      <summary>Form actions</summary>
+      <div class="stack-actions">
+        <button type="submit" form="prompt-form">Save prompt</button>
+        <button type="submit" form="prompt-form" formaction="/validate">Validate</button>
+        <a class="button secondary" href="/">Cancel</a>
+      </div>
+    </details>
+
+    $family_actions_html
+    $download_actions_html
+  </aside>
+</section>

@@ -1,0 +1,26 @@
+<tr class="prompt-list-row" data-is-active="$is_active_attr">
+  <td>
+    <a class="prompt-name" href="/edit?key=$url_key"><code>$prompt_key</code></a>
+  </td>
+  <td><span class="badge">$prompt_type</span></td>
+  <td><span class="status-badge">$status</span></td>
+  <td>
+    <div>$line_count lines</div>
+    <div class="muted">$char_count chars</div>
+  </td>
+  <td>$updated_at</td>
+  <td>
+    <div class="dropbutton-actions">
+      <a class="button small" href="/edit?key=$url_key">Edit</a>
+      <details class="row-details-actions">
+        <summary>More</summary>
+        <div class="row-details-menu">
+          <a href="/preview?key=$url_key">Preview compiled</a>
+          <a href="/history?key=$url_key">History</a>
+          <a href="/download?key=$url_key&format=md">Download MD</a>
+          <a class="danger-link" href="/confirm-delete?key=$url_key">Delete</a>
+        </div>
+      </details>
+    </div>
+  </td>
+</tr>

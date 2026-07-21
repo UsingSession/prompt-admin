@@ -1,0 +1,27 @@
+<section class="page-header">
+  <div>
+    <p class="eyebrow">JSON import</p>
+    <h1>Import Prompts and Hooks</h1>
+    <p class="page-description">Paste JSON exported from Prompt Admin. Supported top-level arrays: <code>prompts</code> and <code>hooks</code>.</p>
+  </div>
+  <div class="page-actions">
+    <a class="button secondary" href="/">Back to prompts</a>
+    <a class="button secondary" href="/hooks">Back to hooks</a>
+  </div>
+</section>
+
+$error_html
+$result_html
+
+<section class="panel">
+  <form method="post" action="/import">
+    <div class="field-group">
+      <label for="payload">JSON payload</label>
+      <textarea id="payload" name="payload"></textarea>
+    </div>
+    <div class="form-actions">
+      <button type="submit" name="mode" value="preview">Preview import</button>
+      <button type="submit" name="mode" value="apply">Apply import</button>
+    </div>
+  </form>
+</section>

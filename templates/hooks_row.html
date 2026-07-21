@@ -1,0 +1,20 @@
+<tr>
+  <td><a class="prompt-name" href="/hook-edit?key=$url_key"><code>$hook_key</code></a></td>
+  <td><code>$hook_group</code></td>
+  <td><span class="badge">$category</span></td>
+  <td>$priority</td>
+  <td>$status</td>
+  <td>$updated_at</td>
+  <td>
+    <div class="dropbutton-actions">
+      <a class="button small" href="/hook-edit?key=$url_key">Edit</a>
+      <details class="row-details-actions">
+        <summary>More</summary>
+        <div class="row-details-menu">
+          <a href="/hook-history?key=$url_key">History</a>
+          <a class="danger-link" href="/hook-confirm-delete?key=$url_key">Delete</a>
+        </div>
+      </details>
+    </div>
+  </td>
+</tr>

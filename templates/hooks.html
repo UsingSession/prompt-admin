@@ -1,0 +1,39 @@
+<section class="page-header">
+  <div>
+    <p class="eyebrow">Reusable prompt blocks</p>
+    <h1>Prompt Hooks</h1>
+    <p class="page-description">Manage reusable rules inserted through <code>#hook_group</code> placeholders.</p>
+  </div>
+  <div class="page-actions">
+    <a class="button" href="/hook-new">New hook</a>
+    <a class="button secondary" href="/import">Import JSON</a>
+    <a class="button secondary" href="/export">Export JSON</a>
+    <a class="button secondary" href="/deleted">Deleted</a>
+  </div>
+</section>
+
+<section class="stats-grid">
+  <div class="stat-card">
+    <span>Hooks</span>
+    <strong>$hook_count</strong>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="table-wrap">
+    <table class="data-table row-hover-table">
+      <thead>
+        <tr>
+          <th>Hook key</th>
+          <th>Group</th>
+          <th>Category</th>
+          <th>Priority</th>
+          <th>Status</th>
+          <th>Updated</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>$rows_html</tbody>
+    </table>
+  </div>
+</section>

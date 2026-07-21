@@ -1,0 +1,50 @@
+.row-hover-table tbody td {
+  transition: background-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.row-hover-table tbody tr:hover td,
+.row-hover-table tbody tr:focus-within td {
+  background-color: var(--bg-hover);
+}
+
+.row-hover-table tbody tr:hover td:first-child,
+.row-hover-table tbody tr:focus-within td:first-child {
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+
+.prompt-list-row[data-is-active="0"] td {
+  background: #d3d6da;
+  color: #475467;
+}
+
+.prompt-list-row[data-is-active="0"] td:first-child {
+  box-shadow: inset 3px 0 0 #98a2b3;
+}
+
+.prompt-list-row[data-is-active="0"]:focus-within td:first-child {
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+
+.prompt-list-row[data-is-active="0"] .prompt-name code {
+  color: #475467;
+}
+
+.status-badge {
+  display: inline-flex;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #ecfdf3;
+  color: #027a48;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.prompt-list-row[data-is-active="0"] .status-badge {
+  background: #f2f4f7;
+  color: #475467;
+}
+
+.prompt-list-row[data-is-active="0"]:hover td,
+.prompt-list-row[data-is-active="0"]:focus-within td {
+  background: #eef2f7;
+}

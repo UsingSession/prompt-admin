@@ -1,0 +1,36 @@
+<section class="page-header">
+  <div>
+    <p class="eyebrow">Compiled prompt</p>
+    <h1>Preview: <code>$prompt_key</code></h1>
+    <p class="page-description">Review detected hook placeholders, resolved hooks, and final prompt sent to the LLM.</p>
+  </div>
+  <div class="page-actions">
+    <a class="button secondary" href="/edit?key=$url_key">Back to prompt</a>
+  </div>
+</section>
+
+<section class="stats-grid">
+  <div class="stat-card">
+    <span>Detected groups</span>
+    <ul>$group_items</ul>
+  </div>
+  <div class="stat-card">
+    <span>Resolved hooks</span>
+    <ul>$hook_items</ul>
+  </div>
+  <div class="stat-card">
+    <span>Unresolved groups</span>
+    <ul>$unresolved_items</ul>
+  </div>
+</section>
+
+<section class="preview-layout">
+  <div class="panel preview-panel">
+    <h2>Raw prompt</h2>
+    <pre class="prompt-preview">$raw_prompt</pre>
+  </div>
+  <div class="panel preview-panel">
+    <h2>Compiled prompt</h2>
+    <pre class="prompt-preview">$compiled_prompt</pre>
+  </div>
+</section>

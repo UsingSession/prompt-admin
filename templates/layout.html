@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>$title</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <link rel="stylesheet" href="/static/admin-extra.css">
+  <link rel="stylesheet" href="/static/row-hover.css">
+  <link rel="stylesheet" href="/static/prompt-family.css">
+  <link rel="apple-touch-icon" sizes="180x180" href="/static/icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/static/icons/favicon-16x16.png">
+  <link rel="icon" href="/static/icons/favicon.ico">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand brand-link" href="/">
+        <div class="brand-mark">AI</div>
+        <div>
+          <strong>Prompt Admin</strong>
+          <span>Local control panel</span>
+        </div>
+      </a>
+      <nav class="nav">
+        <a href="/">Prompts</a>
+        <a href="/families">Families</a>
+        <a href="/hooks">Hooks</a>
+        <a href="/api-docs">API</a>
+      </nav>
+    </aside>
+    <main class="main">
+      $content
+    </main>
+  </div>
+  <script src="/static/editor-toolbar.js" defer></script>
+</body>
+</html>

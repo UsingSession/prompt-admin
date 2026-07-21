@@ -1,0 +1,154 @@
+.prompt-family-card {
+  display: grid;
+  gap: 10px;
+  padding: 0 12px 12px;
+}
+
+.compact-meta-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.compact-meta-list div {
+  display: grid;
+  gap: 4px;
+}
+
+.compact-meta-list dt {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.compact-meta-list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.prompt-family-selector-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-muted);
+}
+
+.prompt-family-selector-control {
+  position: relative;
+}
+
+.prompt-family-select,
+.family-filter-field select,
+.family-switcher select {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 40px 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background-color: var(--surface);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) 18px,
+    calc(100% - 13px) 18px;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  color: var(--text);
+  cursor: pointer;
+  font: 14px Inter, Arial, sans-serif;
+  font-weight: 700;
+  appearance: none;
+}
+
+.prompt-family-select:focus,
+.family-filter-field select:focus,
+.family-switcher select:focus {
+  border-color: var(--primary);
+  outline: 3px solid rgba(37, 87, 214, 0.14);
+}
+
+.prompt-family-select:disabled {
+  background-color: var(--surface-muted);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.prompt-family-selector-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.prompt-family-selector-meta .help-text {
+  flex: 1 1 360px;
+  margin: 0;
+}
+
+.family-filter-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: end;
+}
+
+.family-filter-field {
+  flex: 1 1 320px;
+  margin: 0;
+}
+
+.family-switcher {
+  display: grid;
+  gap: 8px;
+}
+
+.family-switcher select {
+  min-height: 38px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  background-position:
+    calc(100% - 18px) 16px,
+    calc(100% - 13px) 16px;
+}
+
+.family-nav-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.family-description {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.family-description:empty::before {
+  color: var(--muted);
+  content: "No description.";
+}
+
+.family-description-textarea {
+  min-height: 180px;
+  resize: vertical;
+}
+
+.disabled-button {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+@media (max-width: 720px) {
+  .prompt-family-selector-meta {
+    display: grid;
+  }
+
+  .prompt-family-selector-meta .button,
+  .family-filter-form .button,
+  .family-filter-form button {
+    width: 100%;
+  }
+}
