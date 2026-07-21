@@ -4,9 +4,9 @@ Prompt Admin is a lightweight local admin UI and runtime prompt provider for
 managing LLM system prompts, prompt families, and reusable prompt hooks stored
 in PostgreSQL.
 
-It is a generic prompt-management service. It does not ship with domain-specific
-prompts, and it does not assume any specific use case such as image generation,
-content generation, coding assistance, or agent routing.
+It is a generic prompt-management service. It ships without domain-specific
+prompts and does not assume any specific workflow, model, category, or prompt
+naming scheme.
 
 ## Purpose
 
