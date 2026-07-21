@@ -2,8 +2,7 @@ import time
 
 import psycopg
 
-from config import DB_CONFIG, MIGRATIONS_DIR, SCHEMA_SQL_PATH, load_seed_prompt_keys
-from validation import validate_key
+from config import DB_CONFIG, MIGRATIONS_DIR, SCHEMA_SQL_PATH
 
 
 def connect():
@@ -37,19 +36,6 @@ def run_migrations(cursor):
         )
 
 
-def seed_default_prompts(cursor):
-    for prompt_key in load_seed_prompt_keys():
-        validate_key(prompt_key)
-        cursor.execute(
-            """
-            INSERT INTO ai_system_prompts (prompt_key, system_prompt, category)
-            VALUES (%s, '', 'starter')
-            ON CONFLICT (prompt_key) DO NOTHING;
-            """,
-            (prompt_key,),
-        )
-
-
 def init_database():
     schema_sql = SCHEMA_SQL_PATH.read_text(encoding="utf-8")
     last_error = None
@@ -60,7 +46,6 @@ def init_database():
                 with connection.cursor() as cursor:
                     cursor.execute(schema_sql)
                     run_migrations(cursor)
-                    seed_default_prompts(cursor)
                 connection.commit()
             return
         except Exception as exc:
