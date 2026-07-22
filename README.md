@@ -1,31 +1,50 @@
 # Prompt Admin
 
-Prompt Admin is a lightweight local admin UI and runtime prompt provider for
-managing LLM system prompts, prompt families, and reusable prompt hooks stored
-in PostgreSQL.
+Prompt Admin is a local, generic prompt-management service backed by
+PostgreSQL. It provides a server-rendered administration UI and an HTTP API for
+runtime consumers such as n8n.
 
-It is a generic prompt-management service. It ships without domain-specific
-prompts and does not assume any specific workflow, model, category, or prompt
-naming scheme.
+Prompt Admin owns prompt-management application logic, UI and API behavior,
+database migrations, tests, Docker image construction, and releases. It does
+not own workflow graphs, model calls, Qdrant datasets, or project-specific
+prompts.
 
-## Purpose
+## Current implementation
 
-Prompt Admin exists to make prompt management editable from a browser without
-opening workflow tools or editing Markdown files manually.
+Prompt Admin v2 Phase 1 establishes the FastAPI foundation while preserving the
+current prompt, family, hook, compilation, import, and export domain behavior.
 
-The current source of truth is PostgreSQL:
+Current stack:
+
+- FastAPI application factory;
+- Uvicorn runtime;
+- server-rendered HTML;
+- Jinja2 wiring for framework error pages;
+- existing template renderer for current feature pages;
+- plain CSS and minimal vanilla JavaScript;
+- explicit PostgreSQL access through `psycopg`;
+- SQL schema and migrations;
+- no ORM;
+- no frontend framework;
+- no authentication for the initial local-only deployment.
+
+The accepted Prompt Admin v2 domain redesign is implemented in later phases.
+Phase 1 does not add variants, immutable revisions, bundles, publication, or
+compiled bundle artifacts.
+
+## Runtime flow
 
 ```text
-Prompt Admin UI -> PostgreSQL -> Prompt Admin API -> runtime consumer
+Runtime consumer
+-> Prompt Admin API
+-> repositories and compiler
+-> PostgreSQL
 ```
 
-Runtime consumers such as n8n workflows should load compiled prompts from the
-Prompt Admin API instead of querying PostgreSQL directly. This keeps hook
-resolution inside Prompt Admin.
+Consumers must use Prompt Admin's HTTP API. They must not query Prompt Admin
+PostgreSQL tables directly.
 
 ## Local URL
-
-After starting the service, open:
 
 ```text
 http://localhost:8090
@@ -37,438 +56,103 @@ Health check:
 http://localhost:8090/healthz
 ```
 
-The service is intended for local use only. It has no authentication. When it
-is published through Docker Compose, bind it to `127.0.0.1` and do not expose it
-publicly.
+The service is local-only. Bind it to `127.0.0.1` through the infrastructure
+repository and do not expose it publicly without adding authentication and
+other deployment controls.
 
-## Design constraints
+## Configuration
 
-Prompt Admin is intentionally small and dependency-light.
+Supported environment variables:
 
-Current design:
+```text
+PROMPT_ADMIN_HOST=0.0.0.0
+PROMPT_ADMIN_PORT=8090
+POSTGRES_HOST=postgres
+POSTGRES_PORT=5432
+POSTGRES_DB=postgres
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=local_password
+```
 
-- Python stdlib HTTP server.
-- PostgreSQL access through `psycopg`.
-- Server-rendered HTML templates.
-- Plain CSS.
-- SQL migrations.
-- No Flask.
-- No FastAPI.
-- No ORM.
-- No frontend framework.
-- No separate auth layer.
+Configuration is validated at startup. Ports must be valid TCP port numbers,
+and required string values must not be empty.
 
-`app.py` remains only the server entrypoint. Most logic is split into smaller
-modules.
+## Application entrypoint
 
-## Main features
+Application factory:
 
-### Prompt management
+```python
+from app import create_app
 
-Prompt Admin supports:
+app = create_app()
+```
 
-- listing prompts;
-- filtering prompts by category, status, and search text;
-- creating prompts;
-- editing prompts;
-- prompt family assignment;
-- active/inactive state;
-- validation warnings;
+Development run:
+
+```bash
+uvicorn app:create_app --factory --host 0.0.0.0 --port 8090
+```
+
+The Docker image uses the same Uvicorn factory entrypoint.
+
+## Current features
+
+Prompt Admin currently supports:
+
+- prompt CRUD;
+- prompt families;
+- reusable prompt hooks;
+- active and inactive states;
+- soft delete and restore;
+- history snapshots;
 - compiled prompt preview;
-- compiled prompts API;
-- clone as new family item;
-- soft delete;
-- restore;
-- permanent delete;
-- version history;
-- Markdown/text download;
-- JSON export/import.
+- JSON import and export;
+- compiled prompt retrieval through the current runtime API.
 
-Prompt fields:
+A fresh database contains schema and migration metadata only. The application
+does not create project-specific starter records.
 
-| Field | Purpose |
-| --- | --- |
-| `prompt_key` | Stable identifier used by runtime consumers. |
-| `system_prompt` | Raw prompt text with optional hook placeholders. This is the source of truth for prompt behavior. |
-| `category` | Optional UI grouping and API filter. |
-| `prompt_family_key` | Optional logical family/group relation. |
-| `family_version` | Internal family item number. In the UI this is shown as `Family item #`, not as a revision. |
-| `is_active` | Whether the prompt is active and available through the runtime API. |
-| `created_at` | Creation timestamp. |
-| `updated_at` | Last update timestamp. |
-| `deleted_at` | Soft-delete timestamp. |
+## Current runtime endpoint
 
-Prompt-level `description` is intentionally not used. The `system_prompt`
-textarea should explain what the prompt does.
+The current pre-v2 runtime endpoint remains available during Phase 1:
 
-### Prompt families
-
-Prompt families are logical groups of related but independent prompts.
-
-```text
-Family = logical group / collection
-Family item = one independent prompt inside that group
-Family is not a revision chain
-```
-
-Family fields:
-
-| Field | Purpose |
-| --- | --- |
-| `family_key` | Stable identifier of the prompt family. |
-| `description` | Human-facing note about the group. Not sent to the LLM. |
-| `created_at` | Creation timestamp. |
-| `updated_at` | Last update timestamp. |
-| `deleted_at` | Soft-delete timestamp. |
-
-Family routes:
-
-```text
-/families
-/families?q=<query>
-/family?key=<family_key>
-/family-new
-/family-edit?key=<family_key>
-/family-confirm-delete?key=<family_key>
-```
-
-Family overview shows attached prompts with:
-
-- family item number;
-- prompt key;
-- category;
-- active/inactive state;
-- updated date;
-- actions: Edit, Preview, Clone as new family item.
-
-Deleting a family is blocked while prompts still reference it. Detach or delete
-attached prompts first.
-
-### Prompt hooks
-
-Prompt hooks are reusable rule blocks that can be inserted into prompts with
-placeholders.
-
-Example prompt:
-
-```text
-You are a local assistant.
-
-#hook_global_rules
-
-Return only valid JSON.
-```
-
-Example hook group:
-
-```text
-hook_global_rules
-```
-
-All active hooks from the matching group are inserted into the compiled prompt,
-ordered by priority.
-
-Hook fields:
-
-| Field | Purpose |
-| --- | --- |
-| `hook_key` | Stable identifier of one hook record. |
-| `hook_group` | Group matched by placeholders such as `#hook_global_rules`. |
-| `hook_content` | Reusable text inserted into compiled prompts. |
-| `description` | Human-readable note. Not inserted into the prompt. |
-| `category` | Optional UI grouping. |
-| `priority` | Lower values are inserted first inside the same group. |
-| `is_active` | Whether the hook is eligible for compilation. |
-| `created_at` | Creation timestamp. |
-| `updated_at` | Last update timestamp. |
-| `deleted_at` | Soft-delete timestamp. |
-
-### Hook group input
-
-The hook form shows `hook_` as a visual prefix.
-
-User input:
-
-```text
-global_rules
-```
-
-Stored value:
-
-```text
-hook_global_rules
-```
-
-Prompt placeholder:
-
-```text
-#hook_global_rules
-```
-
-If a full value such as `hook_global_rules` is entered, it is kept as-is and is
-not converted to `hook_hook_global_rules`.
-
-### Compiled prompt preview
-
-The preview page shows what will be sent to the runtime consumer after hook
-placeholders are resolved.
-
-Preview includes:
-
-- raw prompt;
-- detected hook groups;
-- resolved hooks;
-- unresolved hook groups;
-- compiled prompt.
-
-URL pattern:
-
-```text
-/preview?key=<prompt_key>
-```
-
-### Compiled prompts API
-
-Prompt Admin exposes a JSON endpoint for runtime usage:
-
-```text
+```http
 GET /api/prompts/compiled
 ```
 
-Use this endpoint instead of direct PostgreSQL prompt queries from external
-workflow tools. The endpoint returns active prompts with hooks already inserted.
-
-Internal Docker URL example:
+At least one selector is required:
 
 ```text
-http://prompt-admin:8090/api/prompts/compiled
+?category=general
+?key=assistant_rules&key=response_formatter
+?keys=assistant_rules,response_formatter
+?category=general&keys=assistant_rules,response_formatter
 ```
 
-Host URL for browser testing:
+The endpoint returns active, non-deleted prompts with hook placeholders
+compiled.
 
-```text
-http://localhost:8090/api/prompts/compiled
+The future primary v2 runtime endpoint will be implemented in a later phase:
+
+```http
+GET /api/v1/bundles/{bundle_key}/compiled
 ```
 
-The endpoint requires at least one selector:
+## HTTP errors
 
-- `category`
-- `key`
-- `keys`
-
-Load all active prompts from a category:
-
-```text
-GET http://prompt-admin:8090/api/prompts/compiled?category=general
-```
-
-Load multiple prompts by repeated `key` parameters:
-
-```text
-GET http://prompt-admin:8090/api/prompts/compiled?key=assistant_rules&key=response_formatter
-```
-
-Load multiple prompts by comma-separated `keys`:
-
-```text
-GET http://prompt-admin:8090/api/prompts/compiled?keys=assistant_rules,response_formatter
-```
-
-Combine category and keys:
-
-```text
-GET http://prompt-admin:8090/api/prompts/compiled?category=general&keys=assistant_rules,response_formatter
-```
-
-When both category and keys are provided, the response contains the
-intersection: active prompts in that category and matching the requested keys.
-
-When keys are requested, `missing_keys` lists requested keys that were not
-returned. This can happen when a prompt does not exist, is inactive, is
-soft-deleted, or is excluded by the category filter. For category-only requests,
-`missing_keys` is an empty array.
-
-Response shape:
+API errors use a stable machine-readable envelope:
 
 ```json
 {
-  "category": "general",
-  "keys": ["assistant_rules"],
-  "missing_keys": [],
-  "count": 1,
-  "prompts": [
-    {
-      "prompt_key": "assistant_rules",
-      "category": "general",
-      "is_active": true,
-      "updated_at": "2026-07-01T06:00:00+00:00",
-      "raw_prompt": "Raw prompt with #hook_global_rules",
-      "compiled_prompt": "Prompt with hooks inserted",
-      "detected_groups": ["hook_global_rules"],
-      "resolved_hooks": [
-        {
-          "hook_key": "hook_global_rules-user_intent",
-          "hook_group": "hook_global_rules",
-          "description": "User intent preservation rule",
-          "category": "global",
-          "priority": 10,
-          "is_active": true
-        }
-      ],
-      "unresolved_groups": []
-    }
-  ]
-}
-```
-
-The main runtime field is:
-
-```text
-compiled_prompt
-```
-
-Example mapping code for a workflow tool after the HTTP Request step:
-
-```js
-const promptMap = {};
-
-for (const prompt of $json.prompts || []) {
-  promptMap[prompt.prompt_key] = prompt.compiled_prompt;
-}
-
-return [
-  {
-    json: {
-      ...$json,
-      prompt_map: promptMap,
-    },
+  "error": {
+    "code": "bad_request",
+    "message": "Request could not be completed."
   }
-];
-```
-
-Then use a compiled prompt in later workflow steps:
-
-```text
-{{$json.prompt_map.assistant_rules}}
-```
-
-API help page in the UI:
-
-```text
-/api-docs
-```
-
-### Clone flow
-
-Prompts and hooks can be cloned.
-
-Prompt clone behavior:
-
-- opens a copied form;
-- does not save immediately;
-- creates a new family item;
-- generates the next available prompt key for grouped prompts;
-- preserves the source prompt as an independent prompt.
-
-Hook clone behavior:
-
-- opens a copied form;
-- does not save immediately;
-- allows editing the key, group, and all other fields.
-
-### Delete lifecycle
-
-Prompt Admin uses a two-step delete model.
-
-```text
-Delete              -> soft delete, moves the record to Deleted Records
-Restore             -> restores the soft-deleted record
-Delete permanently  -> removes the record and its version history
-```
-
-Permanent delete is only available from the deleted records page.
-
-This avoids accidentally hard-deleting active prompts, families, or hooks.
-
-### Import/export
-
-Export returns prompts, families, and hooks:
-
-```json
-{
-  "families": [],
-  "prompts": [],
-  "hooks": []
 }
 ```
 
-Import supports the same structure and has a preview/apply flow.
-
-Prompt import validates `prompt_family_key` and `family_version` as a pair. If
-one is provided, the other must also be provided, and `family_version` must be a
-positive integer.
-
-Useful URLs:
-
-```text
-/export
-/import
-```
-
-## Startup behavior
-
-Prompt Admin initializes database schema and applies SQL migrations during
-startup.
-
-It does not create starter prompts or domain-specific prompt records. A fresh
-database starts empty except for schema and migration metadata. Prompts, hooks,
-and families should be created through the UI or imported from JSON.
-
-## Database model
-
-Prompt Admin uses these main tables:
-
-| Table | Purpose |
-| --- | --- |
-| `ai_prompt_families` | Prompt family records. |
-| `ai_system_prompts` | Current prompt records. |
-| `ai_system_prompt_versions` | Prompt version history snapshots. |
-| `ai_prompt_hooks` | Current hook records. |
-| `ai_prompt_hook_versions` | Hook version history. |
-| `prompt_admin_migrations` | Applied migration tracking. |
-
-Schema and migrations live in:
-
-```text
-prompt-admin/database/
-├─ schema.sql
-└─ migrations/
-   ├─ 001_prompt_admin_metadata.sql
-   ├─ 002_prompt_hooks.sql
-   ├─ 003_prompt_families.sql
-   └─ 004_prompt_storage_cleanup.sql
-```
-
-## File structure
-
-```text
-prompt-admin/
-├─ app.py                  # Server entrypoint
-├─ config.py               # Environment and paths
-├─ db.py                   # Database connection and initialization
-├─ repository.py           # Prompt persistence
-├─ hook_repository.py      # Hook persistence
-├─ compiler.py             # Hook placeholder resolution
-├─ handlers.py             # HTTP routes
-├─ render.py               # Template rendering helpers
-├─ validation.py           # Key/text validation helpers
-├─ exporting.py            # Import/export helpers
-├─ static_files.py         # Static file serving
-├─ database/
-├─ static/
-├─ templates/
-└─ tests/
-```
+UI errors return server-rendered HTML. Unexpected errors return generic client
+messages while diagnostic details are logged locally.
 
 ## Important routes
 
@@ -477,28 +161,76 @@ prompt-admin/
 | `/` | Prompt list. |
 | `/new` | Create prompt form. |
 | `/edit?key=<prompt_key>` | Edit prompt. |
-| `/clone?key=<prompt_key>` | Clone prompt as a new family item. |
+| `/clone?key=<prompt_key>` | Clone prompt. |
 | `/preview?key=<prompt_key>` | Compiled prompt preview. |
-| `/history?key=<prompt_key>` | Prompt version history. |
+| `/history?key=<prompt_key>` | Prompt history. |
 | `/families` | Prompt family list. |
 | `/family?key=<family_key>` | Prompt family overview. |
-| `/family-new` | Create family form. |
-| `/family-edit?key=<family_key>` | Edit family. |
-| `/api-docs` | HTML help page for runtime API usage. |
-| `/api/prompts/compiled` | JSON endpoint for compiled prompts. |
 | `/hooks` | Hook list. |
-| `/hook-new` | Create hook form. |
-| `/hook-edit?key=<hook_key>` | Edit hook. |
-| `/hook-clone?key=<hook_key>` | Clone hook. |
-| `/hook-history?key=<hook_key>` | Hook version history. |
-| `/deleted` | Soft-deleted prompts, families, and hooks. |
-| `/import` | Import JSON. |
-| `/export` | Export JSON. |
-| `/healthz` | Service/database health check. |
+| `/api-docs` | Current runtime API help. |
+| `/api/prompts/compiled` | Current compiled prompts API. |
+| `/deleted` | Deleted records. |
+| `/import` | JSON import. |
+| `/export` | JSON export. |
+| `/healthz` | Application and database health. |
 
-## Local verification
+## Database
 
-Run unit tests from the repository root:
+Current tables:
+
+| Table | Purpose |
+| --- | --- |
+| `ai_prompt_families` | Prompt family records. |
+| `ai_system_prompts` | Current prompt records. |
+| `ai_system_prompt_versions` | Prompt history snapshots. |
+| `ai_prompt_hooks` | Current hook records. |
+| `ai_prompt_hook_versions` | Hook history snapshots. |
+| `prompt_admin_migrations` | Applied migration tracking. |
+
+Database files:
+
+```text
+database/
+├─ schema.sql
+└─ migrations/
+   ├─ 001_prompt_admin_metadata.sql
+   ├─ 002_prompt_hooks.sql
+   ├─ 003_prompt_families.sql
+   └─ 004_prompt_storage_cleanup.sql
+```
+
+Phase 1 does not modify this schema.
+
+## Project structure
+
+```text
+prompt-admin/
+├─ app.py
+├─ config.py
+├─ routes.py
+├─ db.py
+├─ repository.py
+├─ hook_repository.py
+├─ compiler.py
+├─ render.py
+├─ validation.py
+├─ exporting.py
+├─ database/
+├─ docs/
+├─ static/
+├─ templates/
+└─ tests/
+```
+
+## Tests
+
+Install development dependencies:
+
+```bash
+python -m pip install -r requirements-dev.txt
+```
+
+Run the complete test suite:
 
 ```bash
 python -m unittest discover -s tests -p "test_*.py"
@@ -510,31 +242,21 @@ Build the Docker image:
 docker build -t prompt-admin:local .
 ```
 
-Manual pages to check after starting the service:
+GitHub Actions runs unit tests and a Docker build for pull requests.
+
+## Phase 1 documentation
+
+See:
 
 ```text
-http://localhost:8090/
-http://localhost:8090/families
-http://localhost:8090/family?key=<family_key>
-http://localhost:8090/hooks
-http://localhost:8090/api-docs
-http://localhost:8090/hook-new
-http://localhost:8090/preview?key=<prompt_key>
-http://localhost:8090/api/prompts/compiled?category=general
-http://localhost:8090/api/prompts/compiled?keys=assistant_rules,response_formatter
-http://localhost:8090/deleted
-http://localhost:8090/import
-http://localhost:8090/export
-http://localhost:8090/healthz
+docs/fastapi-foundation.md
 ```
 
 ## Operational notes
 
-- Prompt Admin is local-only.
-- It has no user authentication.
-- PostgreSQL is the source of truth for prompts, families, and hooks.
-- Runtime consumers should use the compiled prompts API instead of direct
-  PostgreSQL prompt queries.
-- Markdown files are not the primary prompt storage model.
-- The application does not create default prompts during startup.
-- Backups should include the PostgreSQL dump.
+- PostgreSQL is the source of truth for Prompt Admin records.
+- Runtime consumers use the Prompt Admin API.
+- Prompt Admin does not create domain-specific starter prompts.
+- Backups must include the Prompt Admin PostgreSQL data.
+- Prompt contents should not be logged by default.
+- Released Docker image versions should be pinned by `UsingSession/localai`.
