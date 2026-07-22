@@ -84,6 +84,18 @@ Legacy migrations `001` through `004` were removed because they recreated the
 pre-v2 tables on an empty database. Repeated startup is idempotent because
 applied migration filenames are recorded in `prompt_admin_migrations`.
 
+Startup acquires a PostgreSQL advisory transaction lock before schema
+initialization. Multiple Prompt Admin processes therefore cannot apply the same
+migration concurrently.
+
+Startup also validates migration metadata against the expected v2 tables. It
+fails with an explicit schema-state error when tables exist without metadata or
+metadata references a schema with missing tables. Recovery is documented in:
+
+```text
+docs/v2-database-recovery.md
+```
+
 A fresh database contains only migration metadata and these v2 domain tables:
 
 | Table | Purpose |
@@ -171,10 +183,12 @@ GitHub Actions provisions PostgreSQL and verifies:
 - foreign-key, unique, and check constraints;
 - transaction rollback;
 - idempotent repeated startup;
+- serialized concurrent startup;
+- inconsistent migration-state rejection;
 - controlled legacy route behavior;
 - Docker image build;
-- Docker startup against PostgreSQL;
-- `GET /healthz`.
+- concurrent Docker startup against PostgreSQL;
+- `GET /healthz` on both containers.
 
 ## Deferred work
 
