@@ -24,6 +24,16 @@ class PromptAdminConfigTests(unittest.TestCase):
         self.assertEqual(settings.database_config["host"], "database")
         self.assertEqual(settings.database_config["port"], 5433)
 
+    def test_settings_preserve_password_whitespace(self):
+        settings = Settings.from_env(
+            {"POSTGRES_PASSWORD": " leading-and-trailing "}
+        )
+
+        self.assertEqual(
+            settings.postgres_password,
+            " leading-and-trailing ",
+        )
+
     def test_settings_reject_invalid_port(self):
         with self.assertRaises(ValidationError):
             Settings.from_env({"PROMPT_ADMIN_PORT": "70000"})
@@ -31,6 +41,10 @@ class PromptAdminConfigTests(unittest.TestCase):
     def test_settings_reject_empty_database_user(self):
         with self.assertRaises(ValidationError):
             Settings.from_env({"POSTGRES_USER": " "})
+
+    def test_settings_reject_empty_database_password(self):
+        with self.assertRaises(ValidationError):
+            Settings.from_env({"POSTGRES_PASSWORD": ""})
 
 
 if __name__ == "__main__":
