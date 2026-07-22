@@ -51,6 +51,7 @@ POSTGRES_PASSWORD
 ```
 
 Ports must be between `1` and `65535`. Required string values must not be empty.
+Database password values are preserved exactly and are not whitespace-normalized.
 
 ## HTTP behavior
 
@@ -76,6 +77,14 @@ API errors use this shape:
 ```
 
 UI errors return server-rendered HTML.
+
+Responses include `Cache-Control: no-cache`, preserving the previous server's
+cache revalidation behavior.
+
+POST requests validate the `Origin` header when present, falling back to
+`Referer`. Only exact `localhost`, `127.0.0.1`, and `::1` hosts over HTTP or
+HTTPS are accepted. Prefix matches such as `localhost.example.com` are rejected.
+Requests without either header remain supported for local non-browser clients.
 
 ## Health endpoint
 
