@@ -40,30 +40,23 @@ class PromptAdminFastApiTests(unittest.TestCase):
 
         self.assertEqual(response.headers["cache-control"], "no-cache")
 
-    def test_compiled_api_requires_selector(self):
+    def test_legacy_compiled_api_is_controlled_unavailable(self):
         response = self.client.get("/api/prompts/compiled")
 
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()["error"]["code"], "bad_request")
-
-    def test_compiled_api_deduplicates_mixed_key_formats(self):
-        with patch("routes.list_active_prompts", return_value=[]) as list_prompts:
-            response = self.client.get(
-                "/api/prompts/compiled",
-                params=[
-                    ("key", "assistant_rules"),
-                    ("keys", "assistant_rules,response_formatter"),
-                ],
-            )
-
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 503)
         self.assertEqual(
-            response.json()["keys"],
-            ["assistant_rules", "response_formatter"],
+            response.json()["error"]["code"],
+            "legacy_domain_unavailable",
         )
-        list_prompts.assert_called_once_with(
-            category="",
-            prompt_keys=["assistant_rules", "response_formatter"],
+
+    def test_legacy_ui_is_controlled_unavailable(self):
+        response = self.client.get("/")
+
+        self.assertEqual(response.status_code, 503)
+        self.assertIn("Service Unavailable", response.text)
+        self.assertEqual(
+            response.headers["content-type"].split(";")[0],
+            "text/html",
         )
 
     def test_cross_site_post_is_rejected(self):
@@ -86,18 +79,15 @@ class PromptAdminFastApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertIn("Cross-site requests", response.text)
 
-    def test_local_post_is_allowed(self):
-        with patch("routes.soft_delete_prompt") as soft_delete_prompt:
-            response = self.client.post(
-                "/delete",
-                data={"prompt_key": "assistant_rules"},
-                headers={"Origin": "http://localhost:8090"},
-                follow_redirects=False,
-            )
+    def test_local_legacy_post_is_controlled_unavailable(self):
+        response = self.client.post(
+            "/delete",
+            data={"prompt_key": "assistant_rules"},
+            headers={"Origin": "http://localhost:8090"},
+        )
 
-        self.assertEqual(response.status_code, 303)
-        self.assertEqual(response.headers["location"], "/")
-        soft_delete_prompt.assert_called_once_with("assistant_rules")
+        self.assertEqual(response.status_code, 503)
+        self.assertIn("Service Unavailable", response.text)
 
     def test_unknown_api_route_returns_machine_readable_error(self):
         response = self.client.get("/api/unknown")
