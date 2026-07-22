@@ -1,8 +1,11 @@
 import unittest
 
+from fastapi.testclient import TestClient
 from psycopg import IntegrityError, sql
+from psycopg.errors import CheckViolation, ForeignKeyViolation, UniqueViolation
 from psycopg.types.json import Jsonb
 
+from app import create_app
 from db import connect, init_database, transaction
 from repositories.artifact_repository import (
     artifact_exists_for_bundle_revision,
@@ -35,6 +38,20 @@ EXPECTED_TABLES = {
     "ai_prompt_bundle_revisions",
     "ai_prompt_bundle_items",
     "ai_compiled_bundle_artifacts",
+}
+
+EXPECTED_INDEXES = {
+    "ai_prompt_families_active_idx",
+    "ai_prompts_active_idx",
+    "ai_prompts_prompt_family_id_idx",
+    "ai_prompt_variants_active_idx",
+    "ai_prompt_variants_status_idx",
+    "ai_hooks_active_idx",
+    "ai_prompt_bundles_active_idx",
+    "ai_prompt_bundle_revisions_status_idx",
+    "ai_prompt_bundle_revisions_published_idx",
+    "ai_prompt_bundle_items_order_idx",
+    "ai_prompt_bundle_items_prompt_revision_id_idx",
 }
 
 LEGACY_TABLES = {
@@ -208,6 +225,20 @@ class PromptAdminDatabaseTests(unittest.TestCase):
         self.assertEqual(table_names, EXPECTED_TABLES)
         self.assertTrue(LEGACY_TABLES.isdisjoint(table_names))
 
+    def test_expected_indexes_exist(self):
+        with connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT indexname
+                    FROM pg_indexes
+                    WHERE schemaname = 'public';
+                    """
+                )
+                index_names = {row[0] for row in cursor.fetchall()}
+
+        self.assertTrue(EXPECTED_INDEXES.issubset(index_names))
+
     def test_migration_metadata_records_v2_baseline(self):
         with connect() as connection:
             with connection.cursor() as cursor:
@@ -244,8 +275,15 @@ class PromptAdminDatabaseTests(unittest.TestCase):
                 )
                 self.assertEqual(cursor.fetchone()[0], 1)
 
+    def test_application_starts_with_empty_v2_domain(self):
+        with TestClient(create_app()) as client:
+            response = client.get("/healthz")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"status": "ok", "database": True})
+
     def test_foreign_keys_reject_missing_parents(self):
-        with self.assertRaises(IntegrityError):
+        with self.assertRaises(ForeignKeyViolation):
             with transaction() as cursor:
                 cursor.execute(
                     """
@@ -263,7 +301,7 @@ class PromptAdminDatabaseTests(unittest.TestCase):
     def test_unique_constraints_reject_duplicate_child_keys(self):
         ids = self.create_prompt_graph()
 
-        with self.assertRaises(IntegrityError):
+        with self.assertRaises(UniqueViolation):
             with transaction() as cursor:
                 cursor.execute(
                     """
@@ -284,39 +322,41 @@ class PromptAdminDatabaseTests(unittest.TestCase):
                 )
 
     def test_check_constraints_protect_domain_invariants(self):
-        invalid_statements = (
-            (
-                """
-                INSERT INTO ai_prompt_families (
-                    family_key,
-                    display_name
+        with self.assertRaises(CheckViolation):
+            with transaction() as cursor:
+                cursor.execute(
+                    """
+                    INSERT INTO ai_prompt_families (
+                        family_key,
+                        display_name
+                    )
+                    VALUES (%s, %s);
+                    """,
+                    ("   ", "Invalid family"),
                 )
-                VALUES (%s, %s);
-                """,
-                ("   ", "Invalid family"),
-            ),
-            (
-                """
-                INSERT INTO ai_prompt_variants (
-                    prompt_id,
-                    variant_key,
-                    display_name,
-                    status
-                )
-                VALUES (%s, %s, %s, %s);
-                """,
-                (999999, "baseline", "Baseline", "invalid"),
-            ),
-        )
-
-        for statement, parameters in invalid_statements:
-            with self.subTest(statement=statement):
-                with self.assertRaises(IntegrityError):
-                    with transaction() as cursor:
-                        cursor.execute(statement, parameters)
 
         ids = self.create_prompt_graph()
-        with self.assertRaises(IntegrityError):
+        with self.assertRaises(CheckViolation):
+            with transaction() as cursor:
+                cursor.execute(
+                    """
+                    INSERT INTO ai_prompt_variants (
+                        prompt_id,
+                        variant_key,
+                        display_name,
+                        status
+                    )
+                    VALUES (%s, %s, %s, %s);
+                    """,
+                    (
+                        ids["prompt_id"],
+                        "candidate",
+                        "Candidate",
+                        "invalid",
+                    ),
+                )
+
+        with self.assertRaises(CheckViolation):
             with transaction() as cursor:
                 cursor.execute(
                     """
@@ -334,7 +374,7 @@ class PromptAdminDatabaseTests(unittest.TestCase):
         ids = self.create_prompt_graph()
         bundle = self.create_bundle_graph(ids["revision_id"])
 
-        with self.assertRaises(IntegrityError):
+        with self.assertRaises(CheckViolation):
             with transaction() as cursor:
                 cursor.execute(
                     """
@@ -348,7 +388,7 @@ class PromptAdminDatabaseTests(unittest.TestCase):
                     (bundle["bundle_id"], 2, "published"),
                 )
 
-        with self.assertRaises(IntegrityError):
+        with self.assertRaises(CheckViolation):
             with transaction() as cursor:
                 cursor.execute(
                     """
@@ -389,7 +429,7 @@ class PromptAdminDatabaseTests(unittest.TestCase):
                 ),
             )
 
-        with self.assertRaises(IntegrityError):
+        with self.assertRaises(UniqueViolation):
             with transaction() as cursor:
                 cursor.execute(
                     """
@@ -407,7 +447,22 @@ class PromptAdminDatabaseTests(unittest.TestCase):
                     ),
                 )
 
-        with self.assertRaises(IntegrityError):
+        with transaction() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO ai_prompt_bundle_revisions (
+                    bundle_id,
+                    revision_number,
+                    status
+                )
+                VALUES (%s, %s, %s)
+                RETURNING id;
+                """,
+                (bundle["bundle_id"], 2, "draft"),
+            )
+            second_revision_id = cursor.fetchone()[0]
+
+        with self.assertRaises(CheckViolation):
             with transaction() as cursor:
                 cursor.execute(
                     """
@@ -416,20 +471,18 @@ class PromptAdminDatabaseTests(unittest.TestCase):
                         content_hash,
                         compiled_payload
                     )
-                    SELECT id, %s, %s
-                    FROM ai_prompt_bundle_revisions
-                    WHERE id = %s;
+                    VALUES (%s, %s, %s);
                     """,
                     (
+                        second_revision_id,
                         "sha256:list",
                         Jsonb([]),
-                        bundle["bundle_revision_id"],
                     ),
                 )
 
     def test_on_delete_rules_preserve_immutable_history(self):
         ids = self.create_prompt_graph()
-        bundle = self.create_bundle_graph(ids["revision_id"])
+        self.create_bundle_graph(ids["revision_id"])
 
         with transaction() as cursor:
             cursor.execute(
@@ -442,14 +495,14 @@ class PromptAdminDatabaseTests(unittest.TestCase):
             )
             self.assertIsNone(cursor.fetchone()[0])
 
-        with self.assertRaises(IntegrityError):
+        with self.assertRaises(ForeignKeyViolation):
             with transaction() as cursor:
                 cursor.execute(
                     "DELETE FROM ai_prompts WHERE id = %s;",
                     (ids["prompt_id"],),
                 )
 
-        with self.assertRaises(IntegrityError):
+        with self.assertRaises(ForeignKeyViolation):
             with transaction() as cursor:
                 cursor.execute(
                     """
@@ -458,8 +511,6 @@ class PromptAdminDatabaseTests(unittest.TestCase):
                     """,
                     (ids["revision_id"],),
                 )
-
-        self.assertTrue(bundle["bundle_revision_id"] > 0)
 
     def test_transaction_rolls_back_and_closes_cleanly(self):
         with self.assertRaises(RuntimeError):
