@@ -12,6 +12,7 @@ class PromptAdminFastApiTests(unittest.TestCase):
             create_app(initialize_database=False),
             raise_server_exceptions=False,
         )
+        self.addCleanup(self.client.close)
 
     def test_health_returns_ok_when_database_is_available(self):
         with patch("routes.db_health_check", return_value=True):
@@ -32,6 +33,12 @@ class PromptAdminFastApiTests(unittest.TestCase):
             response.json(),
             {"status": "degraded", "database": False},
         )
+
+    def test_responses_disable_unvalidated_cache_reuse(self):
+        with patch("routes.db_health_check", return_value=True):
+            response = self.client.get("/healthz")
+
+        self.assertEqual(response.headers["cache-control"], "no-cache")
 
     def test_compiled_api_requires_selector(self):
         response = self.client.get("/api/prompts/compiled")
@@ -68,6 +75,29 @@ class PromptAdminFastApiTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 403)
         self.assertIn("Cross-site requests", response.text)
+
+    def test_localhost_subdomain_post_is_rejected(self):
+        response = self.client.post(
+            "/delete",
+            data={"prompt_key": "assistant_rules"},
+            headers={"Origin": "http://localhost.evil.example"},
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertIn("Cross-site requests", response.text)
+
+    def test_local_post_is_allowed(self):
+        with patch("routes.soft_delete_prompt") as soft_delete_prompt:
+            response = self.client.post(
+                "/delete",
+                data={"prompt_key": "assistant_rules"},
+                headers={"Origin": "http://localhost:8090"},
+                follow_redirects=False,
+            )
+
+        self.assertEqual(response.status_code, 303)
+        self.assertEqual(response.headers["location"], "/")
+        soft_delete_prompt.assert_called_once_with("assistant_rules")
 
     def test_unknown_api_route_returns_machine_readable_error(self):
         response = self.client.get("/api/unknown")
