@@ -1,6 +1,7 @@
 import logging
 from contextlib import asynccontextmanager
 from typing import Any
+from urllib.parse import urlsplit
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -17,6 +18,7 @@ from routes import router
 
 LOGGER = logging.getLogger("prompt_admin")
 TEMPLATES = Jinja2Templates(directory=str(TEMPLATES_DIR))
+LOCAL_POST_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
 
 
 ERROR_CODES = {
@@ -42,6 +44,18 @@ def error_message(detail: Any, status_code: int) -> str:
     if status_code == 500:
         return "Request failed."
     return "Request could not be completed."
+
+
+def is_local_request_source(value: str) -> bool:
+    try:
+        parsed = urlsplit(value)
+    except ValueError:
+        return False
+
+    return (
+        parsed.scheme in {"http", "https"}
+        and parsed.hostname in LOCAL_POST_HOSTS
+    )
 
 
 def error_response(
@@ -98,6 +112,29 @@ def create_app(
     )
     application.include_router(router)
 
+    @application.middleware("http")
+    async def apply_common_http_policy(request: Request, call_next):
+        response: Response
+        if request.method == "POST":
+            source = (
+                request.headers.get("Origin")
+                or request.headers.get("Referer")
+                or ""
+            )
+            if source and not is_local_request_source(source):
+                response = error_response(
+                    request,
+                    403,
+                    "Cross-site requests are not allowed.",
+                )
+            else:
+                response = await call_next(request)
+        else:
+            response = await call_next(request)
+
+        response.headers.setdefault("Cache-Control", "no-cache")
+        return response
+
     @application.exception_handler(PromptAdminError)
     async def prompt_admin_error_handler(
         request: Request,
@@ -146,6 +183,3 @@ def create_app(
         return error_response(request, 500, "Request failed.")
 
     return application
-
-
-app = create_app()
