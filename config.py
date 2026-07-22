@@ -22,14 +22,13 @@ class Settings(BaseModel):
     postgres_port: int = Field(default=5432, ge=1, le=65535)
     postgres_db: str = "postgres"
     postgres_user: str = "postgres"
-    postgres_password: str = "local_password"
+    postgres_password: str = Field(default="local_password", min_length=1)
 
     @field_validator(
         "host",
         "postgres_host",
         "postgres_db",
         "postgres_user",
-        "postgres_password",
     )
     @classmethod
     def validate_non_empty(cls, value: str) -> str:
