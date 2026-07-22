@@ -3,7 +3,9 @@ FROM python:3.13-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    PIP_NO_CACHE_DIR=1
+    PIP_NO_CACHE_DIR=1 \
+    PROMPT_ADMIN_HOST=0.0.0.0 \
+    PROMPT_ADMIN_PORT=8090
 
 WORKDIR /app
 
@@ -26,4 +28,4 @@ USER prompt-admin
 
 EXPOSE 8090
 
-CMD ["python", "app.py"]
+CMD ["sh", "-c", "exec uvicorn app:create_app --factory --host \"$PROMPT_ADMIN_HOST\" --port \"$PROMPT_ADMIN_PORT\""]
