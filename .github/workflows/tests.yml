@@ -54,10 +54,10 @@ jobs:
       - name: Build Docker image
         run: docker build --tag prompt-admin:test .
 
-      - name: Start Docker image against empty PostgreSQL
+      - name: Start concurrent images against empty PostgreSQL
         run: |
           docker run --detach \
-            --name prompt-admin-test \
+            --name prompt-admin-test-1 \
             --network host \
             --env POSTGRES_HOST=127.0.0.1 \
             --env POSTGRES_PORT=5432 \
@@ -67,18 +67,33 @@ jobs:
             --env PROMPT_ADMIN_HOST=127.0.0.1 \
             --env PROMPT_ADMIN_PORT=8090 \
             prompt-admin:test
+          docker run --detach \
+            --name prompt-admin-test-2 \
+            --network host \
+            --env POSTGRES_HOST=127.0.0.1 \
+            --env POSTGRES_PORT=5432 \
+            --env POSTGRES_DB=prompt_admin_test \
+            --env POSTGRES_USER=prompt_admin \
+            --env POSTGRES_PASSWORD=prompt_admin_test \
+            --env PROMPT_ADMIN_HOST=127.0.0.1 \
+            --env PROMPT_ADMIN_PORT=8091 \
+            prompt-admin:test
 
-      - name: Verify Docker health endpoint
+      - name: Verify concurrent Docker health endpoints
         run: |
           for attempt in $(seq 1 30); do
-            if curl --fail --silent http://127.0.0.1:8090/healthz; then
+            if curl --fail --silent http://127.0.0.1:8090/healthz \
+              && curl --fail --silent http://127.0.0.1:8091/healthz; then
               exit 0
             fi
             sleep 1
           done
-          docker logs prompt-admin-test
+          docker logs prompt-admin-test-1
+          docker logs prompt-admin-test-2
           exit 1
 
-      - name: Stop Docker smoke-test container
+      - name: Stop Docker smoke-test containers
         if: always()
-        run: docker rm --force prompt-admin-test || true
+        run: |
+          docker rm --force prompt-admin-test-1 || true
+          docker rm --force prompt-admin-test-2 || true
