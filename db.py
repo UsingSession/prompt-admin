@@ -62,6 +62,14 @@ def acquire_migration_lock(cursor: Cursor) -> None:
     )
 
 
+def migration_is_applied(cursor: Cursor, migration_name: str) -> bool:
+    cursor.execute(
+        "SELECT 1 FROM prompt_admin_migrations WHERE migration_name = %s;",
+        (migration_name,),
+    )
+    return cursor.fetchone() is not None
+
+
 def existing_v2_tables(cursor: Cursor) -> list[str]:
     cursor.execute(
         """
@@ -76,7 +84,10 @@ def existing_v2_tables(cursor: Cursor) -> list[str]:
     return [row[0] for row in cursor.fetchall()]
 
 
-def validate_migration_state(cursor: Cursor, migration_name: str) -> None:
+def validate_pending_migration_state(
+    cursor: Cursor,
+    migration_name: str,
+) -> None:
     if migration_name != V2_MIGRATION_NAME:
         return
 
@@ -92,20 +103,33 @@ def validate_migration_state(cursor: Cursor, migration_name: str) -> None:
     )
 
 
+def validate_applied_v2_schema(cursor: Cursor) -> None:
+    if not migration_is_applied(cursor, V2_MIGRATION_NAME):
+        return
+
+    existing_tables = set(existing_v2_tables(cursor))
+    missing_tables = sorted(V2_DOMAIN_TABLES - existing_tables)
+    if not missing_tables:
+        return
+
+    table_list = ", ".join(missing_tables)
+    raise DatabaseSchemaError(
+        f"Migration {V2_MIGRATION_NAME} is recorded, but required Prompt "
+        f"Admin v2 tables are missing: {table_list}. Reset the incomplete "
+        "Prompt Admin v2 schema before restarting the application."
+    )
+
+
 def run_migrations(cursor: Cursor) -> None:
     if not MIGRATIONS_DIR.exists():
         return
 
     for migration_path in sorted(MIGRATIONS_DIR.glob("*.sql")):
         migration_name = migration_path.name
-        cursor.execute(
-            "SELECT 1 FROM prompt_admin_migrations WHERE migration_name = %s;",
-            (migration_name,),
-        )
-        if cursor.fetchone():
+        if migration_is_applied(cursor, migration_name):
             continue
 
-        validate_migration_state(cursor, migration_name)
+        validate_pending_migration_state(cursor, migration_name)
         cursor.execute(migration_path.read_text(encoding="utf-8"))
         cursor.execute(
             "INSERT INTO prompt_admin_migrations (migration_name) VALUES (%s);",
@@ -123,6 +147,7 @@ def init_database() -> None:
                 acquire_migration_lock(cursor)
                 cursor.execute(schema_sql)
                 run_migrations(cursor)
+                validate_applied_v2_schema(cursor)
             return
         except DatabaseSchemaError:
             raise
