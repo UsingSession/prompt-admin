@@ -28,6 +28,10 @@
           {% if active_nav == "families" %}aria-current="page"{% endif %}>
           Families
         </a>
+        <a href="/deleted"
+          {% if active_nav == "deleted" %}aria-current="page"{% endif %}>
+          Deleted Records
+        </a>
         <a href="/docs">FastAPI documentation</a>
       </nav>
     </aside>
