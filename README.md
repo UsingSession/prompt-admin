@@ -1,7 +1,7 @@
 # Prompt Admin
 
 Prompt Admin is a local, generic prompt-management service backed by
-PostgreSQL. It owns prompt-management application logic, HTTP API behavior,
+PostgreSQL. It owns prompt-management application logic, UI and API behavior,
 database migrations, tests, Docker image construction, and releases.
 
 Prompt Admin does not own workflow graphs, model calls, Qdrant datasets,
@@ -9,41 +9,47 @@ project-specific prompts, or `UsingSession/localai` orchestration.
 
 ## Current implementation
 
-Prompt Admin v2 Phase 3A provides:
+Prompt Admin v2 Phase 3B provides:
 
 - FastAPI application factory and Uvicorn runtime;
 - lifespan-based PostgreSQL initialization;
 - a clean v2 database schema;
 - explicit `psycopg` SQL and transaction helpers;
-- Prompt Family management API;
-- Prompt metadata management API;
-- Prompt Variant management API;
-- immutable Prompt Revision creation and history;
-- concurrency-safe revision numbering;
+- versioned Prompt-domain management API;
+- server-rendered Prompt management UI;
+- Prompt Family create, read, update, soft delete, and restore workflows;
+- Prompt metadata create, read, update, soft delete, and restore workflows;
+- Prompt Variant create, read, update, and lifecycle status workflows;
+- immutable Prompt Revision creation, history, detail, and comparison;
+- unified and side-by-side Revision diffs;
+- concurrency-safe Revision numbering;
 - stable domain error codes;
-- Pydantic request and response schemas;
-- real PostgreSQL domain tests;
+- Pydantic API and HTML form-boundary validation;
+- real PostgreSQL domain and UI integration tests;
 - Docker startup and health smoke tests.
 
-The server-rendered management UI, Hooks, Bundles, publication, compiled
-artifacts, and runtime Bundle API are implemented in later phases.
-
-Prompt Admin v2 does not preserve the pre-v2 HTTP routes. Removed routes are
-not registered and return the normal `404` response.
+Hooks, Bundles, publication, compiled artifacts, the final runtime Bundle API,
+and import/export remain deferred.
 
 ## Local endpoints
+
+Administration UI:
+
+```text
+http://localhost:8090/
+```
+
+FastAPI documentation:
+
+```text
+http://localhost:8090/docs
+http://localhost:8090/openapi.json
+```
 
 Health check:
 
 ```http
 GET /healthz
-```
-
-OpenAPI:
-
-```text
-http://localhost:8090/docs
-http://localhost:8090/openapi.json
 ```
 
 The service is local-only. Bind it to `127.0.0.1` through the infrastructure
@@ -102,16 +108,109 @@ archived
 `production` is not a Variant status. Production selection belongs to a future
 published Bundle Revision.
 
-Detailed API, domain, error, soft-delete, and concurrency behavior is documented
-in:
+Detailed domain and API behavior:
 
 ```text
 docs/prompt-domain-api.md
+docs/prompt-management-ui.md
 ```
+
+## Server-rendered UI
+
+The UI uses:
+
+```text
+FastAPI UI route
+-> parse path, query, or URL-encoded form data
+-> construct existing Pydantic command schema
+-> call Prompt-domain service
+-> render Jinja2 or return 303 redirect
+```
+
+The UI does not call `/api/v1` over HTTP and does not execute SQL. API and UI
+handlers use the same Prompt-domain service layer.
+
+Core management works without JavaScript. HTML mutations use Post/Redirect/Get.
+
+Active navigation is intentionally limited to:
+
+```text
+Dashboard
+Prompts
+Families
+FastAPI documentation
+```
+
+Hooks, Bundles, import/export, and runtime artifacts are not presented as active
+features before their implementation phases.
+
+### UI routes
+
+Dashboard:
+
+```http
+GET /
+```
+
+Families:
+
+```http
+GET  /families
+GET  /families/new
+POST /families
+GET  /families/{family_key}
+GET  /families/{family_key}/edit
+POST /families/{family_key}/edit
+POST /families/{family_key}/delete
+POST /families/{family_key}/restore
+```
+
+Prompts:
+
+```http
+GET  /prompts
+GET  /prompts/new
+POST /prompts
+GET  /prompts/{prompt_key}
+GET  /prompts/{prompt_key}/edit
+POST /prompts/{prompt_key}/edit
+POST /prompts/{prompt_key}/delete
+POST /prompts/{prompt_key}/restore
+```
+
+Variants:
+
+```http
+GET  /prompts/{prompt_key}/variants/new
+POST /prompts/{prompt_key}/variants
+GET  /prompts/{prompt_key}/variants/{variant_key}
+GET  /prompts/{prompt_key}/variants/{variant_key}/edit
+POST /prompts/{prompt_key}/variants/{variant_key}/edit
+```
+
+Revisions:
+
+```http
+GET  /prompts/{prompt_key}/variants/{variant_key}/revisions/new
+POST /prompts/{prompt_key}/variants/{variant_key}/revisions
+GET  /prompts/{prompt_key}/variants/{variant_key}/revisions/{revision}
+GET  /prompts/{prompt_key}/variants/{variant_key}/compare
+```
+
+The compare route accepts:
+
+```text
+?from_revision=2&to_revision=5
+```
+
+Only Revisions under the Prompt Variant identified by the route are loaded.
 
 ## Management API
 
-### Families
+The versioned `/api/v1` Prompt-domain management API remains unchanged by the
+UI implementation.
+
+Families:
 
 ```http
 GET    /api/v1/families
@@ -122,7 +221,7 @@ DELETE /api/v1/families/{family_key}
 POST   /api/v1/families/{family_key}/restore
 ```
 
-### Prompts
+Prompts:
 
 ```http
 GET    /api/v1/prompts
@@ -133,7 +232,7 @@ DELETE /api/v1/prompts/{prompt_key}
 POST   /api/v1/prompts/{prompt_key}/restore
 ```
 
-### Variants and Revisions
+Variants and Revisions:
 
 ```http
 GET   /api/v1/prompts/{prompt_key}/variants
@@ -148,38 +247,44 @@ GET  /api/v1/prompts/{prompt_key}/variants/{variant_key}/revisions/{revision}
 
 Prompt Revisions expose no update or delete route.
 
-## Removed pre-v2 routes
+## Lifecycle behavior
 
-Backward compatibility with the previous Prompt Admin domain is intentionally
-not provided.
+Families and Prompts use soft deletion and explicit restoration. Deleted
+records are displayed as deleted and are never presented as active.
 
-Examples of removed routes:
+Deleting a Family does not delete its associated Prompts.
 
-```http
-GET  /
-GET  /api-docs
-GET  /api/prompts/compiled
-POST /save
-POST /delete
-```
+Variants use `draft`, `available`, and `archived`. Variant deletion is not
+implemented. Archived Variants retain immutable Revision history but reject new
+Revision creation.
 
-These paths are not explicitly handled. They return normal route-not-found
-responses:
+Prompt Revisions are immutable. Existing Revision pages provide no edit or
+delete controls. An old Revision may be copied into the create form, but saving
+always creates a new Revision.
 
-- removed `/api/...` routes return the machine-readable API `404` envelope;
-- removed UI routes return the server-rendered HTML `404` page;
-- no `legacy_domain_unavailable` compatibility response exists.
+## Revision comparison
 
-A `503` remains valid only where service availability is actually involved:
+Revision comparison uses Python `difflib` and performs no writes.
 
-- `/healthz` when PostgreSQL is unavailable;
-- v2 domain operations when PostgreSQL cannot serve the request.
+The page provides:
+
+- explicit old and new Revision selection;
+- old and new metadata;
+- unified diff;
+- side-by-side diff;
+- line numbers;
+- whitespace-preserving Prompt text;
+- links to both Revision detail pages;
+- an empty state when fewer than two Revisions exist.
+
+Jinja2 autoescaping remains enabled. Prompt and diff content is never inserted
+as trusted HTML.
 
 ## Stable keys
 
 `family_key`, `prompt_key`, and `variant_key` are immutable after creation.
 
-The API rejects:
+The application rejects:
 
 - empty or whitespace-only keys;
 - surrounding whitespace;
@@ -188,23 +293,31 @@ The API rejects:
 
 Invalid keys are not silently normalized.
 
-## Revision concurrency
+## Security
 
-Revision creation executes in one PostgreSQL transaction:
+Browser writes using `POST`, `PUT`, `PATCH`, or `DELETE` validate `Origin` when
+present and otherwise validate `Referer`.
+
+Accepted browser hosts are exact matches:
 
 ```text
-lock Prompt row
--> verify Prompt state
--> lock Variant row
--> verify Variant state
--> calculate the next revision number
--> insert the immutable Revision
--> commit
+localhost
+127.0.0.1
+::1
 ```
 
-The Variant row lock serializes concurrent revision creation for one Variant.
-The unique `(variant_id, revision_number)` constraint remains the final safety
-boundary.
+Malicious prefix or subdomain values such as `localhost.evil.example` are
+rejected. Requests without either header remain supported for local non-browser
+clients.
+
+All responses retain:
+
+```text
+Cache-Control: no-cache
+```
+
+Prompt text is not logged by UI handlers. Raw SQL or PostgreSQL exception
+details are not rendered.
 
 ## Database initialization
 
@@ -226,8 +339,8 @@ database/migrations/005_prompt_model_v2.sql
 ```
 
 Repeated startup is idempotent. Startup acquires a PostgreSQL advisory
-transaction lock before schema initialization and validates migration metadata
-against the expected v2 tables.
+transaction lock and validates migration metadata against the expected v2
+tables.
 
 Recovery and schema details:
 
@@ -235,33 +348,6 @@ Recovery and schema details:
 docs/v2-database-recovery.md
 docs/v2-database-schema.md
 ```
-
-## Transactions and repositories
-
-`db.transaction()`:
-
-- opens one connection and cursor;
-- commits only after the context exits successfully;
-- rolls back when an exception escapes;
-- closes the cursor and connection in all cases.
-
-Prompt-domain responsibilities follow:
-
-```text
-api/
--> HTTP parsing and response mapping
-
-schemas/
--> request validation and serialization
-
-services/
--> domain rules and transaction orchestration
-
-repositories/
--> explicit parameterized SQL and row mapping
-```
-
-No ORM, Alembic, generic repository framework, or frontend framework is used.
 
 ## Tests
 
@@ -271,33 +357,53 @@ Install development dependencies:
 python -m pip install -r requirements-dev.txt
 ```
 
-Run the complete test suite against a dedicated PostgreSQL database:
+Run the complete suite against a dedicated PostgreSQL database:
 
 ```bash
 python -m unittest discover -s tests -p "test_*.py"
 ```
 
-GitHub Actions provisions PostgreSQL and verifies:
+Coverage includes:
 
-- fresh empty-database initialization;
-- v2 schema constraints and migration metadata;
-- Prompt Family, Prompt, Variant, and Revision behavior;
-- soft-delete filtering and restoration;
-- stable API errors and OpenAPI registration;
-- removed pre-v2 routes return normal `404` responses;
-- transaction rollback;
-- concurrent sequential revision creation;
-- idempotent and serialized startup;
-- Docker image build;
-- concurrent Docker startup and `GET /healthz`.
+- application shell and active navigation;
+- HTML form validation and preserved values;
+- Post/Redirect/Get behavior;
+- Family, Prompt, and Variant management pages;
+- soft delete and restore presentation;
+- immutable Revision creation and detail;
+- archived Variant restrictions;
+- unified and side-by-side comparison;
+- escaped Prompt and diff content;
+- comparison read-only behavior;
+- unchanged `/api/v1` OpenAPI routes;
+- exact local-origin safeguards;
+- real PostgreSQL UI lifecycle flows;
+- fresh and repeated database startup;
+- Docker image build and `/healthz`.
+
+## Removed pre-v2 routes
+
+Backward compatibility with the pre-v2 domain is intentionally not provided.
+
+Removed examples include:
+
+```http
+GET  /api-docs
+GET  /api/prompts/compiled
+POST /save
+POST /delete
+```
+
+The root path is now the v2 administration dashboard. Other removed routes
+remain unregistered and return normal `404` responses.
+
+A `503` is used only when service availability is actually involved.
 
 ## Deferred work
 
-Phase 3B and later phases own:
+Later phases own:
 
-- server-rendered Prompt Admin CRUD pages;
-- revision comparison UI;
-- Hook management and Hook Revisions;
+- Hook management and immutable Hook Revisions;
 - hook compilation;
 - Bundles, publication, and compiled artifacts;
 - compiled Bundle runtime endpoints and ETag support;
