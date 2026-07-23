@@ -20,6 +20,10 @@ COPY requirements.txt ./
 RUN python -m pip install --no-cache-dir -r requirements.txt
 
 COPY --chown=prompt-admin:prompt-admin *.py ./
+COPY --chown=prompt-admin:prompt-admin api/ ./api/
+COPY --chown=prompt-admin:prompt-admin repositories/ ./repositories/
+COPY --chown=prompt-admin:prompt-admin schemas/ ./schemas/
+COPY --chown=prompt-admin:prompt-admin services/ ./services/
 COPY --chown=prompt-admin:prompt-admin database/ ./database/
 COPY --chown=prompt-admin:prompt-admin templates/ ./templates/
 COPY --chown=prompt-admin:prompt-admin static/ ./static/

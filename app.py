@@ -62,12 +62,14 @@ def error_response(
     request: Request,
     status_code: int,
     message: str,
+    code: str | None = None,
 ) -> Response:
+    resolved_code = code or error_code(status_code)
     if request.url.path.startswith("/api/"):
         return JSONResponse(
             {
                 "error": {
-                    "code": error_code(status_code),
+                    "code": resolved_code,
                     "message": message,
                 }
             },
@@ -79,7 +81,7 @@ def error_response(
         name="http_error.html",
         context={
             "status_code": status_code,
-            "title": error_code(status_code).replace("_", " ").title(),
+            "title": resolved_code.replace("_", " ").title(),
             "message": message,
         },
         status_code=status_code,
@@ -115,7 +117,7 @@ def create_app(
     @application.middleware("http")
     async def apply_common_http_policy(request: Request, call_next):
         response: Response
-        if request.method == "POST":
+        if request.method in {"POST", "PUT", "PATCH", "DELETE"}:
             source = (
                 request.headers.get("Origin")
                 or request.headers.get("Referer")
@@ -140,7 +142,12 @@ def create_app(
         request: Request,
         exception: PromptAdminError,
     ) -> Response:
-        return error_response(request, 400, str(exception))
+        return error_response(
+            request,
+            exception.status_code,
+            exception.message,
+            exception.code,
+        )
 
     @application.exception_handler(ValueError)
     async def value_error_handler(
@@ -152,9 +159,20 @@ def create_app(
     @application.exception_handler(RequestValidationError)
     async def request_validation_error_handler(
         request: Request,
-        _: RequestValidationError,
+        exception: RequestValidationError,
     ) -> Response:
-        return error_response(request, 422, "Request validation failed.")
+        validation_code = "validation_failed"
+        if any(
+            error.get("loc", ())[-1:] == ("status",)
+            for error in exception.errors()
+        ):
+            validation_code = "invalid_variant_status"
+        return error_response(
+            request,
+            422,
+            "Request validation failed.",
+            validation_code,
+        )
 
     @application.exception_handler(StarletteHTTPException)
     async def http_error_handler(
