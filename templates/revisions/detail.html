@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Revision r{{ revision.revision_number }} | Prompt Admin{% endblock %}
+
+{% block content %}
+<section class="page-header">
+  <div>
+    <p class="eyebrow">Immutable Prompt Revision</p>
+    <h1>Revision r{{ revision.revision_number }}</h1>
+    <p class="page-description">
+      <a href="/prompts/{{ prompt.prompt_key }}/variants/{{ variant.variant_key }}">
+        <code>{{ prompt.prompt_key }}@{{ variant.variant_key }}</code>
+      </a>
+    </p>
+  </div>
+  <div class="page-actions">
+    {% if variant.status != "archived" %}
+      <a class="button"
+        href="/prompts/{{ prompt.prompt_key }}/variants/{{ variant.variant_key }}/revisions/new?from_revision={{ revision.revision_number }}">
+        Create New Revision from This
+      </a>
+    {% endif %}
+    <a class="button secondary"
+      href="/prompts/{{ prompt.prompt_key }}/variants/{{ variant.variant_key }}/compare?from_revision={{ revision.revision_number }}">
+      Compare
+    </a>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <h2>Revision metadata</h2>
+    <span class="badge badge-immutable">immutable</span>
+  </div>
+  <dl class="meta-list">
+    <div><dt>Revision</dt><dd>r{{ revision.revision_number }}</dd></div>
+    <div><dt>Created</dt><dd>{{ revision.created_at }}</dd></div>
+    <div>
+      <dt>Change note</dt>
+      <dd>{{ revision.change_note or "—" }}</dd>
+    </div>
+  </dl>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <h2>System Prompt</h2>
+      <p>This content has no edit or delete operation.</p>
+    </div>
+  </div>
+  <pre class="immutable-prompt"><code>{{ revision.system_prompt }}</code></pre>
+</section>
+{% endblock %}
