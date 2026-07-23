@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}{{ heading }} | Prompt Admin{% endblock %}
+
+{% block content %}
+<section class="page-header">
+  <div>
+    <p class="eyebrow">Prompt Family</p>
+    <h1>{{ heading }}</h1>
+    <p class="page-description">
+      Family keys are stable and cannot be changed after creation.
+    </p>
+  </div>
+</section>
+
+{% if error_summary %}
+  <div class="alert alert-error" role="alert">
+    {{ error_summary }}
+  </div>
+{% endif %}
+
+<form class="panel form-panel" method="post" action="{{ action }}">
+  <div class="field-group">
+    <label for="family_key">Family key</label>
+    <input
+      id="family_key"
+      name="family_key"
+      value="{{ form.family_key }}"
+      maxlength="120"
+      {% if immutable_key %}readonly{% else %}required{% endif %}
+      {% if errors.family_key %}aria-invalid="true"
+      aria-describedby="family_key-errors"{% endif %}
+    >
+    {% if errors.family_key %}
+      <ul class="field-errors" id="family_key-errors">
+        {% for error in errors.family_key %}<li>{{ error }}</li>{% endfor %}
+      </ul>
+    {% endif %}
+  </div>
+
+  <div class="field-group">
+    <label for="display_name">Display name</label>
+    <input
+      id="display_name"
+      name="display_name"
+      value="{{ form.display_name }}"
+      required
+      {% if errors.display_name %}aria-invalid="true"
+      aria-describedby="display_name-errors"{% endif %}
+    >
+    {% if errors.display_name %}
+      <ul class="field-errors" id="display_name-errors">
+        {% for error in errors.display_name %}<li>{{ error }}</li>{% endfor %}
+      </ul>
+    {% endif %}
+  </div>
+
+  <div class="field-group">
+    <label for="description">Description</label>
+    <textarea id="description" name="description"
+      class="metadata-textarea">{{ form.description }}</textarea>
+  </div>
+
+  <div class="form-actions">
+    <button type="submit">{{ submit_label }}</button>
+    <a class="button secondary"
+      href="{% if immutable_key %}/families/{{ form.family_key }}{% else %}/families{% endif %}">
+      Cancel
+    </a>
+  </div>
+</form>
+{% endblock %}
