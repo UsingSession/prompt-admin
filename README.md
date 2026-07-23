@@ -270,7 +270,7 @@ Permanent deletion requires typing the exact stable key. It is available only
 for already soft-deleted records.
 
 Deleting a Family permanently detaches associated Prompts through the existing
-`ON DELETE SET NULL` relation. It does not delete those Prompts.
+foreign-key behavior. It does not delete those Prompts.
 
 Deleting a Prompt permanently removes its Variants and Revisions. The operation
 is blocked when a Revision is referenced by a Bundle item, preserving immutable
