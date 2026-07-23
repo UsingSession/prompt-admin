@@ -3,10 +3,12 @@ from http import HTTPStatus
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
+from api.prompt_management import router as prompt_management_router
 from db import db_health_check
 
 
 router = APIRouter()
+router.include_router(prompt_management_router)
 LEGACY_DOMAIN_MESSAGE = (
     "Prompt Admin v2 domain routes are temporarily unavailable during the "
     "database schema transition."

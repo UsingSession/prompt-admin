@@ -9,18 +9,24 @@ project-specific prompts, or `UsingSession/localai` orchestration.
 
 ## Current implementation
 
-Prompt Admin v2 Phase 2 provides:
+Prompt Admin v2 Phase 3A provides:
 
 - FastAPI application factory and Uvicorn runtime;
 - lifespan-based PostgreSQL initialization;
 - a clean v2 database schema;
 - explicit `psycopg` SQL and transaction helpers;
-- domain-specific repository foundations;
-- real PostgreSQL schema tests;
+- Prompt Family management API;
+- Prompt metadata management API;
+- Prompt Variant management API;
+- immutable Prompt Revision creation and history;
+- concurrency-safe revision numbering;
+- stable domain error codes;
+- Pydantic request and response schemas;
+- real PostgreSQL domain tests;
 - Docker startup and health smoke tests.
 
-The administration UI, prompt CRUD, hook CRUD, bundles, publication, compiled
-artifacts, and runtime bundle API are implemented in later phases.
+The server-rendered management UI, Hooks, Bundles, publication, compiled
+artifacts, and runtime Bundle API are implemented in later phases.
 
 ## Local URL
 
@@ -32,6 +38,13 @@ Health check:
 
 ```http
 GET /healthz
+```
+
+OpenAPI:
+
+```text
+http://localhost:8090/docs
+http://localhost:8090/openapi.json
 ```
 
 The service is local-only. Bind it to `127.0.0.1` through the infrastructure
@@ -61,6 +74,112 @@ uvicorn app:create_app --factory --host 0.0.0.0 --port 8090
 
 The Docker image uses the same application factory entrypoint.
 
+## Prompt domain
+
+```text
+Prompt Family
+└─ Prompt
+   └─ Prompt Variant
+      ├─ Prompt Revision 1
+      └─ Prompt Revision 2
+```
+
+- A Family is optional organizational metadata.
+- A Prompt is a stable logical task and input/output contract.
+- A Variant is an alternative implementation of the same contract.
+- A Revision is an immutable prompt-text snapshot.
+
+Prompt text exists only in `ai_prompt_revisions`. Prompt rows contain metadata
+only.
+
+Variant statuses are:
+
+```text
+draft
+available
+archived
+```
+
+`production` is not a Variant status. Production selection belongs to a future
+published Bundle Revision.
+
+Detailed API, domain, error, soft-delete, and concurrency behavior is documented
+in:
+
+```text
+docs/prompt-domain-api.md
+```
+
+## Management API
+
+### Families
+
+```http
+GET    /api/v1/families
+POST   /api/v1/families
+GET    /api/v1/families/{family_key}
+PATCH  /api/v1/families/{family_key}
+DELETE /api/v1/families/{family_key}
+POST   /api/v1/families/{family_key}/restore
+```
+
+### Prompts
+
+```http
+GET    /api/v1/prompts
+POST   /api/v1/prompts
+GET    /api/v1/prompts/{prompt_key}
+PATCH  /api/v1/prompts/{prompt_key}
+DELETE /api/v1/prompts/{prompt_key}
+POST   /api/v1/prompts/{prompt_key}/restore
+```
+
+### Variants and Revisions
+
+```http
+GET   /api/v1/prompts/{prompt_key}/variants
+POST  /api/v1/prompts/{prompt_key}/variants
+GET   /api/v1/prompts/{prompt_key}/variants/{variant_key}
+PATCH /api/v1/prompts/{prompt_key}/variants/{variant_key}
+
+GET  /api/v1/prompts/{prompt_key}/variants/{variant_key}/revisions
+POST /api/v1/prompts/{prompt_key}/variants/{variant_key}/revisions
+GET  /api/v1/prompts/{prompt_key}/variants/{variant_key}/revisions/{revision}
+```
+
+Prompt Revisions expose no update or delete route.
+
+## Stable keys
+
+`family_key`, `prompt_key`, and `variant_key` are immutable after creation.
+
+The API rejects:
+
+- empty or whitespace-only keys;
+- surrounding whitespace;
+- keys longer than 120 characters;
+- revision suffixes such as `_v1` and `_v2`.
+
+Invalid keys are not silently normalized.
+
+## Revision concurrency
+
+Revision creation executes in one PostgreSQL transaction:
+
+```text
+lock Prompt row
+-> verify Prompt state
+-> lock Variant row
+-> verify Variant state
+-> calculate the next revision number
+-> insert the immutable Revision
+-> commit
+```
+
+The Variant row lock serializes concurrent revision creation for one Variant.
+The unique `(variant_id, revision_number)` constraint remains the final safety
+boundary.
+
 ## Database initialization
 
 The PostgreSQL database was intentionally reset before Phase 2. No legacy data
@@ -80,44 +199,14 @@ The v2 baseline migration is:
 database/migrations/005_prompt_model_v2.sql
 ```
 
-Legacy migrations `001` through `004` were removed because they recreated the
-pre-v2 tables on an empty database. Repeated startup is idempotent because
-applied migration filenames are recorded in `prompt_admin_migrations`.
+Repeated startup is idempotent. Startup acquires a PostgreSQL advisory
+transaction lock before schema initialization and validates migration metadata
+against the expected v2 tables.
 
-Startup acquires a PostgreSQL advisory transaction lock before schema
-initialization. Multiple Prompt Admin processes therefore cannot apply the same
-migration concurrently.
-
-Startup also validates migration metadata against the expected v2 tables. It
-fails with an explicit schema-state error when tables exist without metadata or
-metadata references a schema with missing tables. Recovery is documented in:
+Recovery and schema details:
 
 ```text
 docs/v2-database-recovery.md
-```
-
-A fresh database contains only migration metadata and these v2 domain tables:
-
-| Table | Purpose |
-| --- | --- |
-| `ai_prompt_families` | Human-facing prompt groups. |
-| `ai_prompts` | Stable logical prompt identities. |
-| `ai_prompt_variants` | Alternative implementations of a prompt contract. |
-| `ai_prompt_revisions` | Immutable prompt snapshots. |
-| `ai_hooks` | Stable hook identities. |
-| `ai_hook_revisions` | Immutable hook snapshots. |
-| `ai_prompt_bundles` | Stable runtime bundle identities. |
-| `ai_prompt_bundle_revisions` | Versioned bundle mappings and publication state. |
-| `ai_prompt_bundle_items` | Role-to-prompt-revision mappings. |
-| `ai_compiled_bundle_artifacts` | One immutable artifact per bundle revision. |
-| `prompt_admin_migrations` | Applied migration tracking. |
-
-No default families, prompts, hooks, bundles, artifacts, converted records, or
-project-specific data are inserted.
-
-Detailed constraints, indexes, and deletion rules are documented in:
-
-```text
 docs/v2-database-schema.md
 ```
 
@@ -130,32 +219,37 @@ docs/v2-database-schema.md
 - rolls back when an exception escapes;
 - closes the cursor and connection in all cases.
 
-Phase 2 repository modules are intentionally small:
+Prompt-domain responsibilities follow:
 
 ```text
+api/
+-> HTTP parsing and response mapping
+
+schemas/
+-> request validation and serialization
+
+services/
+-> domain rules and transaction orchestration
+
 repositories/
-├─ prompt_repository.py
-├─ hook_repository.py
-├─ bundle_repository.py
-└─ artifact_repository.py
+-> explicit parameterized SQL and row mapping
 ```
 
-They provide existence checks and revision-number query helpers only. They do
-not implement Phase 3–5 CRUD or update immutable records.
+No ORM, Alembic, generic repository framework, or frontend framework is used.
 
 ## Transitional route behavior
 
-The removed legacy schema cannot support the Phase 1 administration routes.
+The removed legacy schema cannot support the legacy administration routes.
 Until the corresponding v2 phases are implemented:
 
 - `GET /api/prompts/compiled` returns HTTP `503` with error code
   `legacy_domain_unavailable`;
 - legacy UI routes return a server-rendered HTTP `503` page;
-- cross-site POST protection remains active;
+- cross-site browser write protection remains active;
 - unknown API and UI routes remain normal `404` responses;
 - `GET /healthz` remains functional.
 
-The target runtime endpoint is deferred to Phase 6:
+The target runtime endpoint is deferred:
 
 ```http
 GET /api/v1/bundles/{bundle_key}/compiled
@@ -178,28 +272,28 @@ python -m unittest discover -s tests -p "test_*.py"
 GitHub Actions provisions PostgreSQL and verifies:
 
 - fresh empty-database initialization;
-- expected v2 tables and migration metadata;
-- absence of legacy tables and seed data;
-- foreign-key, unique, and check constraints;
+- v2 schema constraints and migration metadata;
+- Prompt Family, Prompt, Variant, and Revision behavior;
+- soft-delete filtering and restoration;
+- stable API errors and OpenAPI registration;
 - transaction rollback;
-- idempotent repeated startup;
-- serialized concurrent startup;
-- inconsistent migration-state rejection;
+- concurrent sequential revision creation;
+- idempotent and serialized startup;
 - controlled legacy route behavior;
 - Docker image build;
-- concurrent Docker startup against PostgreSQL;
-- `GET /healthz` on both containers.
+- concurrent Docker startup and `GET /healthz`.
 
 ## Deferred work
 
-Phase 2 does not implement:
+Phase 3B and later phases own:
 
-- administration UI and prompt management;
-- variant or revision CRUD;
-- hook compiler redesign;
-- bundle publication;
-- runtime compiled bundle endpoints;
-- v2 import or export;
-- n8n changes;
+- server-rendered Prompt Admin CRUD pages;
+- revision comparison UI;
+- Hook management and Hook Revisions;
+- hook compilation;
+- Bundles, publication, and compiled artifacts;
+- compiled Bundle runtime endpoints and ETag support;
+- v2 import and export;
+- n8n integration changes;
 - `UsingSession/localai` image updates;
-- project-specific seed data.
+- project-specific prompts and seed data.
