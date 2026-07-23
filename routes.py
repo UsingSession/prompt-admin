@@ -5,9 +5,11 @@ from fastapi.responses import JSONResponse
 
 from api.prompt_management import router as prompt_management_router
 from db import db_health_check
+from ui.prompt_management import router as prompt_management_ui_router
 
 
 router = APIRouter()
+router.include_router(prompt_management_ui_router)
 router.include_router(prompt_management_router)
 
 
