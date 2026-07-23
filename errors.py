@@ -1,4 +1,4 @@
-class PromptAdminError(Exception):
+class PromptAdminError(ValueError):
     """Stable application error exposed through the HTTP API."""
 
     def __init__(
