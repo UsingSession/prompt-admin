@@ -5,6 +5,7 @@ from psycopg import sql
 
 from app import create_app
 from db import connect, init_database
+from errors import PromptAdminError
 from schemas.prompt import (
     FamilyCreate,
     PromptCreate,
@@ -212,7 +213,10 @@ class DeletedRecordsPostgresTests(unittest.TestCase):
             )
         )
 
-        with self.assertRaisesRegex(Exception, "soft-deleted first"):
+        with self.assertRaisesRegex(
+            PromptAdminError,
+            "soft-deleted first",
+        ):
             deleted_record_service.permanently_delete_prompt(
                 "prompt.active"
             )
