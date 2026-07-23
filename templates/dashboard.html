@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard | Prompt Admin{% endblock %}
+
+{% block content %}
+<section class="page-header">
+  <div>
+    <p class="eyebrow">Prompt Admin v2</p>
+    <h1>Dashboard</h1>
+    <p class="page-description">
+      Manage Prompt metadata, Variants, and immutable Revisions.
+    </p>
+  </div>
+  <div class="page-actions">
+    <a class="button" href="/prompts/new">Create Prompt</a>
+    <a class="button secondary" href="/families/new">Create Family</a>
+  </div>
+</section>
+
+<section class="stats-grid" aria-label="Prompt Admin counts">
+  <article class="stat-card">
+    <span>Active Families</span>
+    <strong>{{ family_count }}</strong>
+  </article>
+  <article class="stat-card">
+    <span>Active Prompts</span>
+    <strong>{{ prompt_count }}</strong>
+  </article>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <h2>Prompt management</h2>
+      <p>
+        Prompt text is created only as immutable Revisions under a Variant.
+      </p>
+    </div>
+  </div>
+  {% if recent_prompts %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Prompt</th>
+            <th scope="col">Category</th>
+            <th scope="col">Family</th>
+            <th scope="col">Updated</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for prompt in recent_prompts %}
+            <tr>
+              <td class="prompt-name">
+                <a href="/prompts/{{ prompt.prompt_key }}">
+                  <code>{{ prompt.prompt_key }}</code>
+                </a>
+              </td>
+              <td>{{ prompt.category or "—" }}</td>
+              <td>{{ prompt.family_key or "—" }}</td>
+              <td>{{ prompt.updated_at }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty-state">
+      No Prompts exist yet. Create a Prompt, then add a Variant and Revision.
+    </div>
+  {% endif %}
+</section>
+{% endblock %}
