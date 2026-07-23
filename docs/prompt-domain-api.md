@@ -7,6 +7,9 @@ Variants, and immutable Prompt Revisions.
 
 The server-rendered management UI is deferred to Phase 3B.
 
+Backward compatibility with the pre-v2 HTTP routes is intentionally not
+provided.
+
 ## Domain terminology
 
 - **Family** is optional organizational metadata.
@@ -204,11 +207,30 @@ Validation failures return `422`. Duplicate keys and invalid lifecycle states
 return `409`. Missing resources return `404`. Database connectivity failures
 return `503`. Unexpected failures remain generic `500` responses.
 
-## Transitional routes
+## Removed pre-v2 routes
 
-`GET /api/prompts/compiled` remains a controlled `503` transitional route.
-Legacy server-rendered domain pages remain unavailable. `GET /healthz` and
-normal unknown-route `404` behavior remain unchanged.
+Pre-v2 routes are not registered. There is no compatibility handler and no
+`legacy_domain_unavailable` response.
+
+Examples:
+
+```http
+GET  /
+GET  /api-docs
+GET  /api/prompts/compiled
+POST /save
+POST /delete
+```
+
+Expected behavior:
+
+- removed `/api/...` paths return the normal machine-readable `404` envelope;
+- removed UI paths return the normal server-rendered HTML `404` page;
+- `/healthz` returns `503` only when PostgreSQL is unavailable;
+- v2 domain operations return `503` only for actual database unavailability.
+
+Cross-site browser POST protection remains application-wide. It is tested using
+registered `/api/v1` write endpoints rather than removed routes.
 
 ## Deferred work
 
