@@ -208,6 +208,6 @@ class PromptRevisionResponse(BoundaryModel):
     created_at: datetime
 
 
-class PrompRevisionListResponse(BoundaryModel):
+class PromptRevisionListResponse(BoundaryModel):
     items: list[PromptRevisionResponse]
     count: int = Field(ge=0)
