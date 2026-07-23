@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}{{ prompt.display_name }} | Prompt Admin{% endblock %}
+
+{% block content %}
+<section class="page-header">
+  <div>
+    <p class="eyebrow">Prompt</p>
+    <h1>{{ prompt.display_name }}</h1>
+    <p class="page-description"><code>{{ prompt.prompt_key }}</code></p>
+  </div>
+  <div class="page-actions">
+    {% if prompt.deleted_at %}
+      <form method="post" action="/prompts/{{ prompt.prompt_key }}/restore">
+        <button type="submit">Restore Prompt</button>
+      </form>
+    {% else %}
+      <a class="button" href="/prompts/{{ prompt.prompt_key }}/variants/new">
+        Create Variant
+      </a>
+      <a class="button secondary"
+        href="/prompts/{{ prompt.prompt_key }}/edit">
+        Edit Prompt
+      </a>
+    {% endif %}
+  </div>
+</section>
+
+<section class="detail-grid">
+  <article class="panel">
+    <div class="panel-header">
+      <h2>Metadata</h2>
+      {% if prompt.deleted_at %}
+        <span class="badge badge-deleted">deleted</span>
+      {% else %}
+        <span class="badge badge-active">active</span>
+      {% endif %}
+    </div>
+    <dl class="meta-list">
+      <div><dt>Key</dt><dd><code>{{ prompt.prompt_key }}</code></dd></div>
+      <div><dt>Category</dt><dd>{{ prompt.category or "—" }}</dd></div>
+      <div>
+        <dt>Family</dt>
+        <dd>
+          {% if prompt.family_key %}
+            <a href="/families/{{ prompt.family_key }}">
+              <code>{{ prompt.family_key }}</code>
+            </a>
+          {% else %}
+            —
+          {% endif %}
+        </dd>
+      </div>
+      <div><dt>Created</dt><dd>{{ prompt.created_at }}</dd></div>
+      <div><dt>Updated</dt><dd>{{ prompt.updated_at }}</dd></div>
+      {% if prompt.deleted_at %}
+        <div><dt>Deleted</dt><dd>{{ prompt.deleted_at }}</dd></div>
+      {% endif %}
+    </dl>
+    <p class="preserve-lines">{{ prompt.description or "No description." }}</p>
+  </article>
+
+  {% if not prompt.deleted_at %}
+    <aside class="panel confirmation-panel">
+      <h2>Soft delete</h2>
+      <p>
+        Soft deletion is reversible. Existing Variants and Revisions remain
+        stored, but new work is blocked until restoration.
+      </p>
+      <form method="post" action="/prompts/{{ prompt.prompt_key }}/delete">
+        <button class="danger" type="submit">Soft-delete Prompt</button>
+      </form>
+    </aside>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <h2>Variants</h2>
+      <p>Variants are alternative implementations of this Prompt contract.</p>
+    </div>
+  </div>
+  {% if prompt.deleted_at %}
+    <div class="empty-state">
+      Restore this Prompt to inspect and manage its Variants.
+    </div>
+  {% elif variants %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Variant</th>
+            <th scope="col">Display name</th>
+            <th scope="col">Status</th>
+            <th scope="col">Updated</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for variant in variants %}
+            <tr>
+              <td>
+                <a href="/prompts/{{ prompt.prompt_key }}/variants/{{ variant.variant_key }}">
+                  <code>{{ variant.variant_key }}</code>
+                </a>
+              </td>
+              <td>{{ variant.display_name }}</td>
+              <td>
+                <span class="badge badge-{{ variant.status }}">
+                  {{ variant.status }}
+                </span>
+              </td>
+              <td>{{ variant.updated_at }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty-state">
+      No Variants exist. Create a Variant before creating Prompt text.
+    </div>
+  {% endif %}
+</section>
+{% endblock %}
