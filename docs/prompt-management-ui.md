@@ -120,7 +120,7 @@ Family permanent deletion:
 
 - is allowed only after soft deletion;
 - removes the Family row;
-- detaches associated Prompts through `ON DELETE SET NULL`;
+- detaches associated Prompts through the existing foreign-key behavior;
 - does not delete associated Prompts.
 
 Prompt permanent deletion:
