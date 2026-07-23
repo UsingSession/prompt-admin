@@ -19,6 +19,7 @@ Prompt Admin v2 Phase 3B provides:
 - server-rendered Prompt management UI;
 - Prompt Family create, read, update, soft delete, and restore workflows;
 - Prompt metadata create, read, update, soft delete, and restore workflows;
+- a deleted-record basket with guarded permanent deletion;
 - Prompt Variant create, read, update, and lifecycle status workflows;
 - immutable Prompt Revision creation, history, detail, and comparison;
 - unified and side-by-side Revision diffs;
@@ -138,6 +139,7 @@ Active navigation is intentionally limited to:
 Dashboard
 Prompts
 Families
+Deleted Records
 FastAPI documentation
 ```
 
@@ -176,6 +178,14 @@ GET  /prompts/{prompt_key}/edit
 POST /prompts/{prompt_key}/edit
 POST /prompts/{prompt_key}/delete
 POST /prompts/{prompt_key}/restore
+```
+
+Deleted Records:
+
+```http
+GET  /deleted
+POST /deleted/families/{family_key}/permanent-delete
+POST /deleted/prompts/{prompt_key}/permanent-delete
 ```
 
 Variants:
@@ -252,7 +262,19 @@ Prompt Revisions expose no update or delete route.
 Families and Prompts use soft deletion and explicit restoration. Deleted
 records are displayed as deleted and are never presented as active.
 
-Deleting a Family does not delete its associated Prompts.
+Soft-deleted Families and Prompts remain in `/deleted`. Their stable keys remain
+reserved while restoration is possible. A record must be deleted permanently
+before the same stable key can be used by a new entity.
+
+Permanent deletion requires typing the exact stable key. It is available only
+for already soft-deleted records.
+
+Deleting a Family permanently detaches associated Prompts through the existing
+`ON DELETE SET NULL` relation. It does not delete those Prompts.
+
+Deleting a Prompt permanently removes its Variants and Revisions. The operation
+is blocked when a Revision is referenced by a Bundle item, preserving immutable
+runtime references.
 
 Variants use `draft`, `available`, and `archived`. Variant deletion is not
 implemented. Archived Variants retain immutable Revision history but reject new
@@ -291,7 +313,9 @@ The application rejects:
 - keys longer than 120 characters;
 - revision suffixes such as `_v1` and `_v2`.
 
-Invalid keys are not silently normalized.
+Invalid keys are not silently normalized. Duplicate active and deleted stable
+keys are not allowed because they would make read and restore operations
+ambiguous.
 
 ## Security
 
@@ -317,7 +341,8 @@ Cache-Control: no-cache
 ```
 
 Prompt text is not logged by UI handlers. Raw SQL or PostgreSQL exception
-details are not rendered.
+details are not rendered. Permanent deletion additionally requires exact
+stable-key confirmation.
 
 ## Database initialization
 
@@ -369,7 +394,9 @@ Coverage includes:
 - HTML form validation and preserved values;
 - Post/Redirect/Get behavior;
 - Family, Prompt, and Variant management pages;
-- soft delete and restore presentation;
+- soft delete, basket, restore, and permanent deletion;
+- stable-key reuse after permanent deletion;
+- referenced Revision protection during permanent deletion;
 - immutable Revision creation and detail;
 - archived Variant restrictions;
 - unified and side-by-side comparison;
