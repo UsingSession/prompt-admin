@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Prompts | Prompt Admin{% endblock %}
+
+{% block content %}
+<section class="page-header">
+  <div>
+    <p class="eyebrow">Prompt contracts</p>
+    <h1>Prompts</h1>
+    <p class="page-description">
+      Prompt records contain metadata only. Text belongs to immutable
+      Revisions.
+    </p>
+  </div>
+  <div class="page-actions">
+    <a class="button" href="/prompts/new">Create Prompt</a>
+  </div>
+</section>
+
+<form class="filter-form" method="get" action="/prompts">
+  <div class="filter-field">
+    <label for="family_key">Family</label>
+    <select id="family_key" name="family_key">
+      <option value="">All Families</option>
+      {% for family in families %}
+        <option value="{{ family.family_key }}"
+          {% if filters.family_key == family.family_key %}selected{% endif %}>
+          {{ family.display_name }}
+          {% if family.deleted_at %}(deleted){% endif %}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="filter-field">
+    <label for="category">Category</label>
+    <select id="category" name="category">
+      <option value="">All categories</option>
+      {% for item in categories %}
+        <option value="{{ item }}"
+          {% if filters.category == item %}selected{% endif %}>
+          {{ item }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="filter-field">
+    <label for="state">Lifecycle state</label>
+    <select id="state" name="state">
+      <option value="active"
+        {% if filters.state == "active" %}selected{% endif %}>
+        Active
+      </option>
+      <option value="deleted"
+        {% if filters.state == "deleted" %}selected{% endif %}>
+        Deleted
+      </option>
+      <option value="all"
+        {% if filters.state == "all" %}selected{% endif %}>
+        All
+      </option>
+    </select>
+  </div>
+  <div class="filter-actions">
+    <button type="submit">Apply</button>
+    <a class="button secondary" href="/prompts">Reset</a>
+  </div>
+</form>
+
+<section class="panel">
+  {% if prompts %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Prompt</th>
+            <th scope="col">Display name</th>
+            <th scope="col">Category</th>
+            <th scope="col">Family</th>
+            <th scope="col">State</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for prompt in prompts %}
+            <tr {% if prompt.deleted_at %}class="is-deleted"{% endif %}>
+              <td class="prompt-name">
+                <a href="/prompts/{{ prompt.prompt_key }}">
+                  <code>{{ prompt.prompt_key }}</code>
+                </a>
+              </td>
+              <td>{{ prompt.display_name }}</td>
+              <td>{{ prompt.category or "—" }}</td>
+              <td>{{ prompt.family_key or "—" }}</td>
+              <td>
+                {% if prompt.deleted_at %}
+                  <span class="badge badge-deleted">deleted</span>
+                {% else %}
+                  <span class="badge badge-active">active</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty-state">No Prompts match these filters.</div>
+  {% endif %}
+</section>
+{% endblock %}
