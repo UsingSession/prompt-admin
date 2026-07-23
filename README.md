@@ -1,7 +1,7 @@
 # Prompt Admin
 
 Prompt Admin is a local, generic prompt-management service backed by
-PostgreSQL. It owns prompt-management application logic, UI and API behavior,
+PostgreSQL. It owns prompt-management application logic, HTTP API behavior,
 database migrations, tests, Docker image construction, and releases.
 
 Prompt Admin does not own workflow graphs, model calls, Qdrant datasets,
@@ -28,11 +28,10 @@ Prompt Admin v2 Phase 3A provides:
 The server-rendered management UI, Hooks, Bundles, publication, compiled
 artifacts, and runtime Bundle API are implemented in later phases.
 
-## Local URL
+Prompt Admin v2 does not preserve the pre-v2 HTTP routes. Removed routes are
+not registered and return the normal `404` response.
 
-```text
-http://localhost:8090
-```
+## Local endpoints
 
 Health check:
 
@@ -149,6 +148,33 @@ GET  /api/v1/prompts/{prompt_key}/variants/{variant_key}/revisions/{revision}
 
 Prompt Revisions expose no update or delete route.
 
+## Removed pre-v2 routes
+
+Backward compatibility with the previous Prompt Admin domain is intentionally
+not provided.
+
+Examples of removed routes:
+
+```http
+GET  /
+GET  /api-docs
+GET  /api/prompts/compiled
+POST /save
+POST /delete
+```
+
+These paths are not explicitly handled. They return normal route-not-found
+responses:
+
+- removed `/api/...` routes return the machine-readable API `404` envelope;
+- removed UI routes return the server-rendered HTML `404` page;
+- no `legacy_domain_unavailable` compatibility response exists.
+
+A `503` remains valid only where service availability is actually involved:
+
+- `/healthz` when PostgreSQL is unavailable;
+- v2 domain operations when PostgreSQL cannot serve the request.
+
 ## Stable keys
 
 `family_key`, `prompt_key`, and `variant_key` are immutable after creation.
@@ -183,7 +209,7 @@ boundary.
 ## Database initialization
 
 The PostgreSQL database was intentionally reset before Phase 2. No legacy data
-migration, conversion, backup, or compatibility path is implemented.
+migration, conversion, or compatibility path is implemented.
 
 Startup runs:
 
@@ -237,24 +263,6 @@ repositories/
 
 No ORM, Alembic, generic repository framework, or frontend framework is used.
 
-## Transitional route behavior
-
-The removed legacy schema cannot support the legacy administration routes.
-Until the corresponding v2 phases are implemented:
-
-- `GET /api/prompts/compiled` returns HTTP `503` with error code
-  `legacy_domain_unavailable`;
-- legacy UI routes return a server-rendered HTTP `503` page;
-- cross-site browser write protection remains active;
-- unknown API and UI routes remain normal `404` responses;
-- `GET /healthz` remains functional.
-
-The target runtime endpoint is deferred:
-
-```http
-GET /api/v1/bundles/{bundle_key}/compiled
-```
-
 ## Tests
 
 Install development dependencies:
@@ -276,10 +284,10 @@ GitHub Actions provisions PostgreSQL and verifies:
 - Prompt Family, Prompt, Variant, and Revision behavior;
 - soft-delete filtering and restoration;
 - stable API errors and OpenAPI registration;
+- removed pre-v2 routes return normal `404` responses;
 - transaction rollback;
 - concurrent sequential revision creation;
 - idempotent and serialized startup;
-- controlled legacy route behavior;
 - Docker image build;
 - concurrent Docker startup and `GET /healthz`.
 
