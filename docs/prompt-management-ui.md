@@ -44,6 +44,7 @@ Navigation includes only implemented features:
 Dashboard
 Prompts
 Families
+Deleted Records
 FastAPI documentation
 ```
 
@@ -97,6 +98,41 @@ The UI supports:
 
 Prompt metadata forms do not accept Prompt text. `prompt_key` is writable only
 during creation.
+
+## Deleted Records
+
+The basket is available at:
+
+```http
+GET /deleted
+```
+
+It lists soft-deleted Families and Prompts separately. Each record supports:
+
+- restore;
+- permanent deletion after exact stable-key confirmation.
+
+Permanent deletion is intentionally separate from soft deletion. A stable key
+remains reserved while its record is in the basket. Deleting the record
+permanently releases the key so a new record may use it.
+
+Family permanent deletion:
+
+- is allowed only after soft deletion;
+- removes the Family row;
+- detaches associated Prompts through `ON DELETE SET NULL`;
+- does not delete associated Prompts.
+
+Prompt permanent deletion:
+
+- is allowed only after soft deletion;
+- removes all Variants and immutable Revisions owned by the Prompt;
+- is blocked when any Revision is referenced by a Bundle item;
+- preserves the invariant that referenced immutable Revisions cannot be
+  deleted.
+
+Partial unique indexes are not used to permit duplicate active and deleted
+stable keys. Such duplicates would make read and restore behavior ambiguous.
 
 ## Variants
 
@@ -169,6 +205,9 @@ Prefix and subdomain matches are rejected.
 
 All responses retain `Cache-Control: no-cache`.
 
+Permanent deletion requires an exact stable-key confirmation in addition to the
+common Origin or Referer validation.
+
 ## Testing
 
 Run:
@@ -179,7 +218,8 @@ python -m unittest discover -s tests -p "test_*.py"
 
 UI route tests use service mocks for HTTP boundary behavior. Separate
 PostgreSQL integration tests verify the real HTML create, redirect, detail,
-Revision, archived-state, and comparison flows.
+Revision, archived-state, comparison, restore, permanent-deletion, key-reuse,
+and reference-protection flows.
 
 ## Deferred work
 
