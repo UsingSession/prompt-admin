@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Families | Prompt Admin{% endblock %}
+
+{% block content %}
+<section class="page-header">
+  <div>
+    <p class="eyebrow">Prompt organization</p>
+    <h1>Families</h1>
+    <p class="page-description">
+      Families group related Prompts for administration only.
+    </p>
+  </div>
+  <div class="page-actions">
+    <a class="button" href="/families/new">Create Family</a>
+  </div>
+</section>
+
+<form class="filter-form compact-filters" method="get" action="/families">
+  <div class="filter-field">
+    <label for="state">Lifecycle state</label>
+    <select id="state" name="state">
+      <option value="active" {% if state == "active" %}selected{% endif %}>
+        Active
+      </option>
+      <option value="deleted" {% if state == "deleted" %}selected{% endif %}>
+        Deleted
+      </option>
+      <option value="all" {% if state == "all" %}selected{% endif %}>
+        All
+      </option>
+    </select>
+  </div>
+  <div class="filter-actions">
+    <button type="submit">Apply</button>
+    <a class="button secondary" href="/families">Reset</a>
+  </div>
+</form>
+
+<section class="panel">
+  {% if families %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Family</th>
+            <th scope="col">Display name</th>
+            <th scope="col">State</th>
+            <th scope="col">Updated</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for family in families %}
+            <tr {% if family.deleted_at %}class="is-deleted"{% endif %}>
+              <td class="prompt-name">
+                <a href="/families/{{ family.family_key }}">
+                  <code>{{ family.family_key }}</code>
+                </a>
+              </td>
+              <td>{{ family.display_name }}</td>
+              <td>
+                {% if family.deleted_at %}
+                  <span class="badge badge-deleted">deleted</span>
+                {% else %}
+                  <span class="badge badge-active">active</span>
+                {% endif %}
+              </td>
+              <td>{{ family.updated_at }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty-state">
+      No Families match this lifecycle filter.
+    </div>
+  {% endif %}
+</section>
+{% endblock %}
