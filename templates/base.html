@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Prompt Admin{% endblock %}</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <link rel="stylesheet" href="/static/admin-extra.css">
+  <link rel="stylesheet" href="/static/prompt-management.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand brand-link" href="/">
+        <span class="brand-mark" aria-hidden="true">PA</span>
+        <strong>Prompt Admin<span>Local management</span></strong>
+      </a>
+      <nav class="nav" aria-label="Primary navigation">
+        <a href="/"
+          {% if active_nav == "dashboard" %}aria-current="page"{% endif %}>
+          Dashboard
+        </a>
+        <a href="/prompts"
+          {% if active_nav == "prompts" %}aria-current="page"{% endif %}>
+          Prompts
+        </a>
+        <a href="/families"
+          {% if active_nav == "families" %}aria-current="page"{% endif %}>
+          Families
+        </a>
+        <a href="/docs">FastAPI documentation</a>
+      </nav>
+    </aside>
+    <main class="main" id="main-content">
+      {% if status_message %}
+        <div class="alert alert-success" role="status">
+          {{ status_message }}
+        </div>
+      {% endif %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</body>
+</html>
