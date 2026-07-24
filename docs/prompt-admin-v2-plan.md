@@ -23,7 +23,8 @@ GitHub Actions validation.
 
 Delivered the clean v2 PostgreSQL schema, ordered migrations,
 `db.transaction()`, advisory locking, schema-state validation, and startup and
-migration tests. No pre-v2 data migration or compatibility path is supported.
+migration tests. Pre-v2 data migration and HTTP compatibility are not
+supported.
 
 ### Phase 3A — Prompt domain API
 
@@ -63,37 +64,58 @@ responsive layouts were accepted before proceeding to Phase 4.
 
 ### Phase 4A — Hook backend and compiler
 
-**Status:** implementation in progress.
+**Status:** completed and validated on the draft PR branch.
 
-Branch:
-
-```text
-agent/hook-domain-compiler
-```
-
-Base:
+Pull request:
 
 ```text
-d7f296349b5524f9838078fd7470b5f7a726f1a0
+PR:          #7
+Title:       Add Prompt Admin v2 Hook domain and compiler
+Branch:      agent/hook-domain-compiler
+Base:        d7f296349b5524f9838078fd7470b5f7a726f1a0
+Validated:   a2cdb1ea4a64fbd9f9611e3ae8c1d07a86f5e76c
+Merge state: open draft, not merged
 ```
 
-The branch adds:
+Delivered:
 
-- Hook metadata create, list, read, update, soft delete, and restore API;
-- immutable Hook Revision create, list, and read API;
+- Hook metadata create, list, category filter, read, update, soft delete, and
+  restore API;
+- immutable Hook Revision create, ascending list, and exact read API;
+- strict Hook stable-key, group, content, priority, and request validation;
 - concurrency-safe sequential Hook Revision numbering;
-- deterministic effective-Revision selection;
+- deterministic highest-Revision selection without enabled fallback;
+- deterministic group resolution through one repository query;
+- pure placeholder parsing and resolved-content compilation;
+- caller-owned PostgreSQL cursor support for future Bundle publication;
 - preview and strict compilation modes;
-- Prompt Revision compiled-preview endpoint;
-- strict Hook and compiler schemas;
+- stable unresolved-group behavior;
+- read-only Prompt Revision compiled-preview endpoint;
 - stable Hook and compiler errors;
-- unit, API, and real PostgreSQL tests;
+- unit, API, service, OpenAPI, and real PostgreSQL tests;
 - Hook domain and compiler documentation.
 
-Do not mark Phase 4A completed until the full suite, real PostgreSQL Hook tests,
-concurrent Revision creation, deterministic compiler behavior, compiled preview,
-OpenAPI, Prompt API/UI regressions, startup checks, Docker build, and
-`/healthz` have passed.
+GitHub Actions validation on the recorded head completed successfully:
+
+```text
+complete Python unittest suite: passed
+real PostgreSQL integration tests: passed
+concurrent Hook Revision creation: passed
+deterministic compiler tests: passed
+preview and strict mode tests: passed
+Prompt Revision compiled preview: passed
+Prompt API and UI regression tests: passed
+OpenAPI verification: passed
+exact-origin safeguards: passed
+fresh and repeated startup: passed
+concurrent startup: passed
+Docker image build in test workflow: passed
+separate Docker build workflow: passed
+GET /healthz for both concurrent containers: passed
+```
+
+Phase 4A remains in a draft PR until maintainer review and merge. No runtime or
+`localai` contract changes are included.
 
 ### Phase 4B — Hook UI and impact views
 
@@ -111,34 +133,58 @@ Deliverables:
 
 **Status:** pending.
 
-Deliverables include Bundle CRUD, draft Bundle Revisions, role mappings,
-transactional publication, immutable Compiled Artifacts, and SHA-256 hashing.
+Deliverables:
+
+- Prompt Bundle CRUD;
+- draft Bundle Revisions;
+- role mappings to exact Prompt Revisions;
+- Bundle validation;
+- transactional publication;
+- immutable Compiled Artifacts;
+- deterministic SHA-256 content hashes;
+- publication and rollback tests.
 
 ### Phase 6 — Runtime API
 
 **Status:** pending.
 
-Deliverables include published Bundle retrieval, historical artifact retrieval,
-stable runtime errors, ETag, and `If-None-Match`.
+Deliverables:
+
+- current published Bundle retrieval;
+- historical compiled artifact retrieval;
+- stable runtime errors;
+- ETag and `If-None-Match`;
+- n8n-facing contract documentation.
 
 ### Phase 7 — Import, export, and administration UX
 
 **Status:** pending.
 
-Deliverables include versioned export, dry-run import, transactional import,
-additional filters, and remaining impact views.
+Deliverables:
+
+- versioned v2 export;
+- dry-run import;
+- transactional import;
+- additional filters and administration improvements;
+- remaining impact views.
 
 ### Phase 8 — Release and integration
 
 **Status:** pending.
 
-Deliverables include release notes, a versioned Docker image, `localai` image
-pinning, n8n migration, smoke tests, and backup and restore verification.
+Deliverables:
+
+- release notes;
+- versioned Prompt Admin Docker image;
+- `localai` image pinning;
+- n8n migration to published Bundle retrieval;
+- integration smoke tests;
+- backup and restore verification.
 
 ## Purpose
 
 Prompt Admin is a generic prompt-management service for multiple runtime
-consumers. It owns prompt, hook, bundle, compilation, publication, and
+consumers. It owns Prompt, Hook, Bundle, compilation, publication, and
 application contracts. It does not own workflow sequencing, model calls,
 Qdrant retrieval, retries, or project-specific records.
 
@@ -148,11 +194,11 @@ Qdrant retrieval, retries, or project-specific records.
 
 Owns:
 
-- application UI and API;
+- application UI and HTTP API;
 - Prompt, Hook, Bundle, Revision, and publication behavior;
 - PostgreSQL schema and migrations;
-- tests, Dockerfile, GitHub Actions, and releases;
-- compiler and immutable artifact contracts.
+- compiler and immutable artifact contracts;
+- tests, Dockerfile, GitHub Actions, and releases.
 
 ### `UsingSession/localai`
 
@@ -184,14 +230,45 @@ datasets, and domain-specific configuration.
 11. Runtime consumers use Prompt Admin APIs, never its database tables.
 12. n8n retains workflow sequencing and business logic.
 
+## Current implementation
+
+Prompt Admin now contains the Phase 1 FastAPI foundation, Phase 2 v2 schema,
+Phase 3A Prompt management API, Phase 3B Prompt administration UI, and Phase 4A
+Hook backend and deterministic compiler on PR #7.
+
+Active API flow:
+
+```text
+FastAPI API route
+-> Pydantic boundary schema
+-> domain or compiler service
+-> explicit psycopg repository
+-> PostgreSQL
+```
+
+Active UI flow:
+
+```text
+Browser
+-> FastAPI UI route
+-> Pydantic form boundary
+-> Prompt-domain service
+-> explicit psycopg repository
+-> Jinja2 response or 303 redirect
+```
+
+UI handlers do not issue loopback HTTP requests or execute SQL. Core Prompt
+administration works without JavaScript.
+
 ## Current application structure
 
 ```text
 app.py
--> application creation, middleware, exceptions, static files
+-> application creation, middleware, errors, static files
 
 routes.py
--> UI routers, Prompt API, Hook API, compiler preview, /healthz
+-> Prompt UI, Deleted Records UI, Prompt API, Hook API,
+   compiler preview, and /healthz
 
 api/prompt_management.py
 -> Prompt management API
@@ -218,7 +295,8 @@ services/hook_service.py
 -> Hook lifecycle and Revision transaction orchestration
 
 services/compiler.py
--> pure parsing, caller-owned-cursor resolution, deterministic compilation
+-> pure parsing, caller-owned-cursor resolution,
+   deterministic compilation
 
 repositories/prompt_repository.py
 -> explicit Prompt SQL
@@ -231,16 +309,22 @@ db.py
 ```
 
 Historical root-level `compiler.py` and `hook_repository.py` remain inactive.
-They use pre-v2 tables and are not imported into Phase 4A. Cleanup remains a
-separate reviewable task unless removal can be proven safe and small.
+They use pre-v2 tables and are not imported into Phase 4A. Their removal remains
+a separate cleanup task unless it can be proven small and safe.
 
 ## Prompt domain
 
 Prompt rows store metadata only. Prompt text exists only in immutable Prompt
-Revisions. Prompt Variants use `draft`, `available`, and `archived`.
+Revisions. Prompt Variants use:
+
+```text
+draft
+available
+archived
+```
 
 Prompt Revision numbering is serialized by locking the Prompt and Variant rows
-before allocating the next number.
+before allocating the next Revision number.
 
 ## Hook domain
 
@@ -306,7 +390,7 @@ SELECT Hook row FOR UPDATE
 The unique `(hook_id, revision_number)` constraint remains the final safety
 boundary. No retry loop hides an incorrect locking design.
 
-## Compiler
+## Compiler contract
 
 Placeholder grammar:
 
@@ -314,10 +398,12 @@ Placeholder grammar:
 #hook_[A-Za-z0-9_.-]+
 ```
 
-The parser preserves first-occurrence group order and deduplicates detected
-metadata. Resolution loads all requested groups through one repository query.
+The parser scans left to right, preserves first-occurrence group order,
+deduplicates detected metadata, and replaces every recognized occurrence.
+Prompt text outside recognized placeholders remains unchanged.
 
-For each group, enabled effective Revisions are ordered by:
+Resolution loads all requested groups through one repository query. For each
+group, enabled effective Revisions are ordered by:
 
 ```text
 priority ASC
@@ -353,10 +439,10 @@ GET /api/v1/prompts/{prompt_key}/variants/{variant_key}/revisions/
     {revision}/compiled-preview
 ```
 
-This endpoint loads an exact immutable Prompt Revision and compiles it against
+The endpoint loads an exact immutable Prompt Revision and compiles it against
 current effective Hook Revisions. It performs no writes.
 
-The result is mutable when Hook state changes. It is not a published artifact,
+The result can change when Hook state changes. It is not a published artifact,
 final runtime API, Bundle endpoint, or n8n production contract.
 
 ## Current Hook API
@@ -431,10 +517,10 @@ database/migrations/005_prompt_model_v2.sql
 ```
 
 Phase 4A uses the existing `ai_hooks` and `ai_hook_revisions` schema. No new
-migration is expected. Fresh, repeated, and concurrent startup behavior must
-remain unchanged.
+migration was required. Fresh, repeated, and concurrent startup behavior is
+unchanged and validated.
 
-## Validation baseline
+## Testing baseline
 
 Every pull request runs:
 
@@ -442,26 +528,27 @@ Every pull request runs:
 python -m unittest discover -s tests -p "test_*.py"
 ```
 
-Phase 4A validation must cover:
+Current verified coverage includes:
 
-- Hook metadata lifecycle and filters;
-- immutable Hook Revision history;
-- rollback and concurrent numbering;
-- effective Revision selection without fallback;
-- deterministic parser, ordering, and separator;
-- preview and strict modes;
-- Prompt Revision compiled preview;
-- OpenAPI and absent mutation routes;
-- Prompt API/UI regressions;
-- exact-origin safeguards;
+- Prompt API and UI regression behavior;
+- Hook metadata lifecycle and category filtering;
+- strict Hook boundary validation;
+- immutable Hook Revision history and exact content preservation;
+- rollback and real PostgreSQL concurrent numbering;
+- effective Revision selection without enabled fallback;
+- disabled, re-enabled, deleted, restored, and no-Revision behavior;
+- parser order, deduplication, repeated placeholders, and invalid forms;
+- deterministic priority/key ordering and fixed separator;
+- preview unresolved-token preservation and strict unresolved failure;
+- compiled-preview read-only behavior;
+- OpenAPI and absent immutable mutation routes;
+- exact-origin safeguards and cache policy;
 - fresh, repeated, and concurrent startup;
-- Docker image build and `/healthz`.
-
-Do not claim validation success until checks are executed successfully.
+- Docker image build and concurrent `/healthz` checks.
 
 ## Documentation
 
-Phase 4A updates:
+Phase 4A repository-owned documentation:
 
 ```text
 README.md
@@ -488,7 +575,23 @@ retrieval and n8n integration are not implemented in Phase 4A.
 
 ## Definition of done
 
-Prompt Admin v2 is complete only when Hooks compile deterministically, Bundles
-publish immutable artifacts, runtime consumers retrieve complete published
-Bundles, import/export is versioned, backups are verified, and released Docker
-images are pinned in `localai`.
+Prompt Admin v2 as a whole remains incomplete after Phase 4A.
+
+Current progress:
+
+- FastAPI foundation: complete;
+- clean v2 schema: complete;
+- Prompt management API: complete;
+- Prompt administration UI and Revision comparison: complete;
+- Hook management API and immutable Hook Revisions: complete on PR #7;
+- deterministic preview and strict compiler: complete on PR #7;
+- Hook UI and impact views: pending;
+- Bundles and publication: pending;
+- final runtime API: pending;
+- import/export: pending;
+- release and `localai` integration: pending.
+
+Prompt Admin v2 is complete only when Bundles publish immutable artifacts,
+runtime consumers retrieve complete published Bundles, import/export is
+versioned, backups are verified, and released Docker images are pinned in
+`localai`.
