@@ -19,7 +19,7 @@ Prompt Admin v2 Phase 3B provides:
 - server-rendered Prompt management UI;
 - Prompt Family create, read, update, soft delete, and restore workflows;
 - Prompt metadata create, read, update, soft delete, and restore workflows;
-- a deleted-record basket with guarded permanent deletion;
+- a deleted-record basket with permanent deletion;
 - Prompt Variant create, read, update, and lifecycle status workflows;
 - immutable Prompt Revision creation, history, detail, and comparison;
 - unified and side-by-side Revision diffs;
@@ -266,8 +266,8 @@ Soft-deleted Families and Prompts remain in `/deleted`. Their stable keys remain
 reserved while restoration is possible. A record must be deleted permanently
 before the same stable key can be used by a new entity.
 
-Permanent deletion requires typing the exact stable key. It is available only
-for already soft-deleted records.
+Permanent deletion is a direct basket action and is available only for already
+soft-deleted records.
 
 Deleting a Family permanently detaches associated Prompts through the existing
 foreign-key behavior. It does not delete those Prompts.
@@ -341,8 +341,8 @@ Cache-Control: no-cache
 ```
 
 Prompt text is not logged by UI handlers. Raw SQL or PostgreSQL exception
-details are not rendered. Permanent deletion additionally requires exact
-stable-key confirmation.
+details are not rendered. Permanent deletion remains protected by the common
+Origin or Referer validation and domain lifecycle rules.
 
 ## Database initialization
 
@@ -395,6 +395,7 @@ Coverage includes:
 - Post/Redirect/Get behavior;
 - Family, Prompt, and Variant management pages;
 - soft delete, basket, restore, and permanent deletion;
+- direct permanent-delete button behavior;
 - stable-key reuse after permanent deletion;
 - referenced Revision protection during permanent deletion;
 - immutable Revision creation and detail;
