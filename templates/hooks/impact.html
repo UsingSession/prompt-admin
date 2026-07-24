@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block title %}Hook Impact | Prompt Admin{% endblock %}
+
+{% block content %}
+<section class="page-header">
+  <div>
+    <p class="eyebrow">Prompt Revision references</p>
+    <h1>Hook impact</h1>
+    <p class="page-description">
+      <a href="/hooks/{{ hook.hook_key }}"><code>{{ hook.hook_key }}</code></a>
+    </p>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <h2>Selected Hook</h2>
+      <p>This view uses the latest Hook Revision by default.</p>
+    </div>
+    {% if contribution_state == "enabled" %}
+      <span class="badge badge-enabled">enabled</span>
+    {% elif contribution_state == "disabled" %}
+      <span class="badge badge-disabled">disabled</span>
+    {% elif contribution_state == "deleted" %}
+      <span class="badge badge-deleted">deleted</span>
+    {% else %}
+      <span class="badge badge-neutral">no Revision</span>
+    {% endif %}
+  </div>
+  <dl class="meta-list">
+    <div><dt>Hook key</dt><dd><code>{{ hook.hook_key }}</code></dd></div>
+    <div><dt>Display name</dt><dd>{{ hook.display_name }}</dd></div>
+    <div><dt>Category</dt><dd>{{ hook.category or "—" }}</dd></div>
+    <div><dt>Contribution state</dt><dd>{{ contribution_state|replace("_", " ") }}</dd></div>
+    {% if revision %}
+      <div>
+        <dt>Latest Revision</dt>
+        <dd>
+          <a href="/hooks/{{ hook.hook_key }}/revisions/{{ revision.revision_number }}">
+            r{{ revision.revision_number }}
+          </a>
+        </dd>
+      </div>
+      <div><dt>Hook group</dt><dd><code>#{{ revision.hook_group }}</code></dd></div>
+    {% endif %}
+  </dl>
+</section>
+
+{% if not revision %}
+  <section class="panel empty-state">
+    This Hook has no Revisions, so it has no Hook group or Prompt Revision
+    references.
+  </section>
+{% else %}
+  <section class="panel">
+    <div class="panel-header">
+      <div>
+        <h2>Hooks with latest Revision in this group</h2>
+        <p>
+          Effective contributors compile in priority and Hook-key order.
+          Disabled or deleted Hooks do not contribute.
+        </p>
+      </div>
+    </div>
+    {% if group_hooks %}
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th scope="col">Hook</th>
+              <th scope="col">Revision</th>
+              <th scope="col">Priority</th>
+              <th scope="col">State</th>
+              <th scope="col">Compiler contribution</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in group_hooks %}
+              <tr{% if item.is_selected %} class="selected-impact-row"{% endif %}>
+                <td>
+                  <a href="/hooks/{{ item.hook_key }}">
+                    <code>{{ item.hook_key }}</code>
+                  </a>
+                  {% if item.is_selected %}<span class="badge badge-latest">selected</span>{% endif %}
+                </td>
+                <td>
+                  <a href="/hooks/{{ item.hook_key }}/revisions/{{ item.revision_number }}">
+                    r{{ item.revision_number }}
+                  </a>
+                </td>
+                <td>{{ item.priority }}</td>
+                <td>
+                  {% if item.deleted_at %}
+                    <span class="badge badge-deleted">deleted</span>
+                  {% elif item.is_enabled %}
+                    <span class="badge badge-enabled">enabled</span>
+                  {% else %}
+                    <span class="badge badge-disabled">disabled</span>
+                  {% endif %}
+                </td>
+                <td>{{ "yes" if item.contributes else "no" }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty-state">No Hooks currently use this group.</div>
+    {% endif %}
+  </section>
+
+  <section class="panel">
+    <div class="panel-header">
+      <div>
+        <h2>Prompt Revision references</h2>
+        <p>
+          Exact <code>#{{ revision.hook_group }}</code> parser matches only.
+          This is not a production or runtime-consumer list.
+        </p>
+      </div>
+    </div>
+    {% if prompt_references %}
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th scope="col">Prompt</th>
+              <th scope="col">Variant</th>
+              <th scope="col">Variant status</th>
+              <th scope="col">Revision</th>
+              <th scope="col">Latest</th>
+              <th scope="col">Created</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in prompt_references %}
+              <tr>
+                <td><code>{{ item.prompt_key }}</code></td>
+                <td><code>{{ item.variant_key }}</code></td>
+                <td><span class="badge">{{ item.variant_status }}</span></td>
+                <td>
+                  <a href="/prompts/{{ item.prompt_key }}/variants/{{ item.variant_key }}/revisions/{{ item.revision_number }}">
+                    r{{ item.revision_number }}
+                  </a>
+                </td>
+                <td>{{ "yes" if item.is_latest_revision else "no" }}</td>
+                <td>{{ item.created_at }}</td>
+                <td>
+                  <a href="/prompts/{{ item.prompt_key }}/variants/{{ item.variant_key }}/revisions/{{ item.revision_number }}/compiled-preview">
+                    Compiled preview
+                  </a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty-state">
+        No Prompt Revisions contain this exact Hook group placeholder.
+      </div>
+    {% endif %}
+  </section>
+{% endif %}
+{% endblock %}
