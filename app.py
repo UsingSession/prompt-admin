@@ -30,6 +30,11 @@ ERROR_CODES = {
     500: "internal_error",
     503: "service_unavailable",
 }
+VALIDATION_FIELD_CODES = {
+    "hook_group": "invalid_hook_group",
+    "priority": "invalid_hook_priority",
+    "status": "invalid_variant_status",
+}
 
 
 def error_code(status_code: int) -> str:
@@ -86,6 +91,17 @@ def error_response(
         },
         status_code=status_code,
     )
+
+
+def validation_error_code(exception: RequestValidationError) -> str:
+    for error in exception.errors():
+        location = error.get("loc", ())
+        if not location:
+            continue
+        code = VALIDATION_FIELD_CODES.get(location[-1])
+        if code is not None:
+            return code
+    return "validation_failed"
 
 
 def create_app(
@@ -161,17 +177,11 @@ def create_app(
         request: Request,
         exception: RequestValidationError,
     ) -> Response:
-        validation_code = "validation_failed"
-        if any(
-            error.get("loc", ())[-1:] == ("status",)
-            for error in exception.errors()
-        ):
-            validation_code = "invalid_variant_status"
         return error_response(
             request,
             422,
             "Request validation failed.",
-            validation_code,
+            validation_error_code(exception),
         )
 
     @application.exception_handler(StarletteHTTPException)
