@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="/static/app.css">
   <link rel="stylesheet" href="/static/admin-extra.css">
   <link rel="stylesheet" href="/static/prompt-management.css">
+  <link rel="stylesheet" href="/static/hook-management.css">
 </head>
 <body>
   <div class="app-shell">
@@ -23,6 +24,10 @@
         <a href="/prompts"
           {% if active_nav == "prompts" %}aria-current="page"{% endif %}>
           Prompts
+        </a>
+        <a href="/hooks"
+          {% if active_nav == "hooks" %}aria-current="page"{% endif %}>
+          Hooks
         </a>
         <a href="/families"
           {% if active_nav == "families" %}aria-current="page"{% endif %}>
