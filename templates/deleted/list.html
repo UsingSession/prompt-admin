@@ -51,25 +51,12 @@
                     action="/families/{{ family.family_key }}/restore">
                     <button class="secondary" type="submit">Restore</button>
                   </form>
-                  <details class="action-card danger-zone">
-                    <summary>Delete permanently</summary>
-                    <form method="post"
-                      action="/deleted/families/{{ family.family_key }}/permanent-delete">
-                      <div class="status-card-body">
-                        <p class="help-text">
-                          This cannot be undone. Type the stable key to confirm.
-                        </p>
-                        <label for="family-confirm-{{ loop.index }}">
-                          <code>{{ family.family_key }}</code>
-                        </label>
-                        <input id="family-confirm-{{ loop.index }}"
-                          name="confirm_key" required autocomplete="off">
-                        <button class="danger" type="submit">
-                          Delete permanently
-                        </button>
-                      </div>
-                    </form>
-                  </details>
+                  <form method="post"
+                    action="/deleted/families/{{ family.family_key }}/permanent-delete">
+                    <button class="danger" type="submit">
+                      Delete permanently
+                    </button>
+                  </form>
                 </div>
               </td>
             </tr>
@@ -118,25 +105,12 @@
                     action="/prompts/{{ prompt.prompt_key }}/restore">
                     <button class="secondary" type="submit">Restore</button>
                   </form>
-                  <details class="action-card danger-zone">
-                    <summary>Delete permanently</summary>
-                    <form method="post"
-                      action="/deleted/prompts/{{ prompt.prompt_key }}/permanent-delete">
-                      <div class="status-card-body">
-                        <p class="help-text">
-                          This cannot be undone. Type the stable key to confirm.
-                        </p>
-                        <label for="prompt-confirm-{{ loop.index }}">
-                          <code>{{ prompt.prompt_key }}</code>
-                        </label>
-                        <input id="prompt-confirm-{{ loop.index }}"
-                          name="confirm_key" required autocomplete="off">
-                        <button class="danger" type="submit">
-                          Delete permanently
-                        </button>
-                      </div>
-                    </form>
-                  </details>
+                  <form method="post"
+                    action="/deleted/prompts/{{ prompt.prompt_key }}/permanent-delete">
+                    <button class="danger" type="submit">
+                      Delete permanently
+                    </button>
+                  </form>
                 </div>
               </td>
             </tr>
