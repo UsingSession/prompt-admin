@@ -81,7 +81,6 @@ class DeletedRecordsPostgresTests(unittest.TestCase):
 
         response = self.client.post(
             "/deleted/prompts/prompt.deleted/permanent-delete",
-            data={"confirm_key": "prompt.deleted"},
             follow_redirects=False,
         )
 
@@ -116,7 +115,6 @@ class DeletedRecordsPostgresTests(unittest.TestCase):
 
         response = self.client.post(
             "/deleted/families/family.deleted/permanent-delete",
-            data={"confirm_key": "family.deleted"},
             follow_redirects=False,
         )
 
@@ -194,7 +192,6 @@ class DeletedRecordsPostgresTests(unittest.TestCase):
         prompt_service.delete_prompt("prompt.deleted")
         response = self.client.post(
             "/deleted/prompts/prompt.deleted/permanent-delete",
-            data={"confirm_key": "prompt.deleted"},
         )
 
         self.assertEqual(response.status_code, 409)
