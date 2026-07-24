@@ -1,9 +1,8 @@
-from urllib.parse import parse_qs, urlencode
+from urllib.parse import urlencode
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
-from errors import PromptAdminError
 from schemas.prompt import StableKey
 from services import deleted_record_service, prompt_service
 
@@ -64,45 +63,22 @@ def _redirect(status: str) -> RedirectResponse:
     )
 
 
-async def _confirmation(request: Request, expected_key: str) -> None:
-    content_type = request.headers.get("content-type", "")
-    if not content_type.startswith("application/x-www-form-urlencoded"):
-        raise PromptAdminError(
-            "bad_request",
-            "Unsupported form content type.",
-            400,
-        )
-    body = (await request.body()).decode("utf-8")
-    values = parse_qs(body, keep_blank_values=True)
-    submitted_key = values.get("confirm_key", [""])[-1]
-    if submitted_key != expected_key:
-        raise PromptAdminError(
-            "confirmation_failed",
-            "Enter the exact stable key to confirm permanent deletion.",
-            422,
-        )
-
-
 @router.get("/deleted", response_class=HTMLResponse)
 def deleted_records(request: Request) -> Response:
     return _render(request)
 
 
 @router.post("/deleted/families/{family_key}/permanent-delete")
-async def permanently_delete_family(
-    request: Request,
+def permanently_delete_family(
     family_key: StableKey,
 ) -> RedirectResponse:
-    await _confirmation(request, family_key)
     deleted_record_service.permanently_delete_family(family_key)
     return _redirect("family-permanently-deleted")
 
 
 @router.post("/deleted/prompts/{prompt_key}/permanent-delete")
-async def permanently_delete_prompt(
-    request: Request,
+def permanently_delete_prompt(
     prompt_key: StableKey,
 ) -> RedirectResponse:
-    await _confirmation(request, prompt_key)
     deleted_record_service.permanently_delete_prompt(prompt_key)
     return _redirect("prompt-permanently-deleted")
