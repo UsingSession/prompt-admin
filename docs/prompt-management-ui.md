@@ -110,7 +110,7 @@ GET /deleted
 It lists soft-deleted Families and Prompts separately. Each record supports:
 
 - restore;
-- permanent deletion after exact stable-key confirmation.
+- permanent deletion through a direct action button.
 
 Permanent deletion is intentionally separate from soft deletion. A stable key
 remains reserved while its record is in the basket. Deleting the record
@@ -205,8 +205,8 @@ Prefix and subdomain matches are rejected.
 
 All responses retain `Cache-Control: no-cache`.
 
-Permanent deletion requires an exact stable-key confirmation in addition to the
-common Origin or Referer validation.
+Permanent deletion uses the same Origin or Referer validation as other UI
+writes and remains restricted to records that were soft-deleted first.
 
 ## Testing
 
