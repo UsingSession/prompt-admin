@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Compiled Preview | Prompt Admin{% endblock %}
+
+{% block content %}
+<section class="page-header">
+  <div>
+    <p class="eyebrow">Current Hook state</p>
+    <h1>Prompt compiled preview</h1>
+    <p class="page-description">
+      <a href="/prompts/{{ prompt.prompt_key }}/variants/{{ variant.variant_key }}/revisions/{{ revision.revision_number }}">
+        <code>{{ prompt.prompt_key }}@{{ variant.variant_key }}:r{{ revision.revision_number }}</code>
+      </a>
+    </p>
+  </div>
+</section>
+
+<div class="alert alert-warning" role="note">
+  This preview uses current effective Hooks. It can change without changing the
+  immutable Prompt Revision.
+</div>
+<div class="alert alert-warning" role="note">
+  This result is not a published or reproducible runtime artifact.
+</div>
+{% if preview.unresolved_groups %}
+  <div class="alert alert-error" role="alert">
+    Unresolved Hook groups remain in the compiled text. This preview is not
+    publishable in its current state.
+  </div>
+{% endif %}
+
+<section class="preview-grid">
+  <article class="panel">
+    <div class="panel-header"><h2>Raw Prompt text</h2></div>
+    <pre class="immutable-prompt"><code>{{ revision.system_prompt }}</code></pre>
+  </article>
+  <article class="panel">
+    <div class="panel-header"><h2>Compiled Prompt text</h2></div>
+    <pre class="immutable-prompt compiled-prompt"><code>{{ preview.compiled_prompt }}</code></pre>
+  </article>
+</section>
+
+<section class="panel">
+  <div class="panel-header"><h2>Detected Hook groups</h2></div>
+  {% if preview.detected_groups %}
+    <ul class="token-list">
+      {% for group in preview.detected_groups %}
+        <li><code>#{{ group }}</code></li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <div class="empty-state">No Hook placeholders were detected.</div>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <div class="panel-header"><h2>Resolved Hooks</h2></div>
+  {% if preview.resolved_hooks %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Hook</th>
+            <th scope="col">Revision</th>
+            <th scope="col">Hook group</th>
+            <th scope="col">Priority</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for hook in preview.resolved_hooks %}
+            <tr>
+              <td>
+                <a href="/hooks/{{ hook.hook_key }}">
+                  <code>{{ hook.hook_key }}</code>
+                </a>
+              </td>
+              <td>
+                <a href="/hooks/{{ hook.hook_key }}/revisions/{{ hook.revision_number }}">
+                  r{{ hook.revision_number }}
+                </a>
+              </td>
+              <td><code>#{{ hook.hook_group }}</code></td>
+              <td>{{ hook.priority }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty-state">No effective Hooks were resolved.</div>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <div class="panel-header"><h2>Unresolved Hook groups</h2></div>
+  {% if preview.unresolved_groups %}
+    <ul class="token-list unresolved-list">
+      {% for group in preview.unresolved_groups %}
+        <li><code>#{{ group }}</code></li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <div class="empty-state">All detected Hook groups resolved.</div>
+  {% endif %}
+</section>
+{% endblock %}
