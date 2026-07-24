@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}{{ heading }} | Prompt Admin{% endblock %}
+
+{% block content %}
+<section class="page-header">
+  <div>
+    <p class="eyebrow">Hook metadata</p>
+    <h1>{{ heading }}</h1>
+    <p class="page-description">
+      Hook content, group, priority, and enabled state belong to immutable
+      Revisions, not this metadata form.
+    </p>
+  </div>
+</section>
+
+{% if error_summary %}
+  <div class="alert alert-error" role="alert">
+    <strong>Unable to save Hook.</strong> {{ error_summary }}
+  </div>
+{% endif %}
+
+<section class="panel form-panel">
+  <form method="post" action="{{ action }}" class="stacked-form">
+    <label for="hook-key">Hook key</label>
+    <input id="hook-key" name="hook_key" value="{{ form.hook_key }}"
+      {% if immutable_key %}readonly aria-describedby="hook-key-help"{% endif %}
+      required>
+    {% if immutable_key %}
+      <p class="field-help" id="hook-key-help">
+        The stable Hook key is immutable.
+      </p>
+    {% endif %}
+    {% for message in errors.get("hook_key", []) %}
+      <p class="field-error">{{ message }}</p>
+    {% endfor %}
+
+    <label for="display-name">Display name</label>
+    <input id="display-name" name="display_name"
+      value="{{ form.display_name }}" required>
+    {% for message in errors.get("display_name", []) %}
+      <p class="field-error">{{ message }}</p>
+    {% endfor %}
+
+    <label for="description">Description</label>
+    <textarea id="description" name="description"
+      rows="5">{{ form.description }}</textarea>
+    {% for message in errors.get("description", []) %}
+      <p class="field-error">{{ message }}</p>
+    {% endfor %}
+
+    <label for="category">Category</label>
+    <input id="category" name="category" value="{{ form.category }}">
+    {% for message in errors.get("category", []) %}
+      <p class="field-error">{{ message }}</p>
+    {% endfor %}
+
+    <div class="form-actions">
+      <button type="submit">{{ submit_label }}</button>
+      <a class="button secondary"
+        href="{% if immutable_key %}/hooks/{{ form.hook_key }}{% else %}/hooks{% endif %}">
+        Cancel
+      </a>
+    </div>
+  </form>
+</section>
+{% endblock %}
