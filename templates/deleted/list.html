@@ -8,8 +8,8 @@
     <p class="eyebrow">Administration</p>
     <h1>Deleted Records</h1>
     <p class="page-description">
-      Restore soft-deleted records or delete them permanently to release their
-      stable keys.
+      Restore soft-deleted records. Families and Prompts also support guarded
+      permanent deletion; Hooks do not.
     </p>
   </div>
 </section>
@@ -120,6 +120,50 @@
     </div>
   {% else %}
     <div class="empty-state">No deleted Prompts.</div>
+  {% endif %}
+</section>
+
+<section class="panel deleted-section">
+  <div class="panel-header">
+    <div>
+      <h2>Hooks</h2>
+      <p>
+        Hook keys remain reserved. Permanent Hook deletion is not implemented.
+      </p>
+    </div>
+  </div>
+  {% if hooks %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Hook</th>
+            <th scope="col">Category</th>
+            <th scope="col">Deleted</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for hook in hooks %}
+            <tr class="deleted-record">
+              <td>
+                <strong>{{ hook.display_name }}</strong><br>
+                <code>{{ hook.hook_key }}</code>
+              </td>
+              <td>{{ hook.category or "—" }}</td>
+              <td>{{ hook.deleted_at }}</td>
+              <td>
+                <form method="post" action="/hooks/{{ hook.hook_key }}/restore">
+                  <button class="secondary" type="submit">Restore</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty-state">No deleted Hooks.</div>
   {% endif %}
 </section>
 {% endblock %}
