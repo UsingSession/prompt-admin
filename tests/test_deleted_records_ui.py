@@ -60,21 +60,7 @@ class DeletedRecordsUiTests(unittest.TestCase):
         self.assertIn("prompt.deleted", response.text)
         self.assertIn('aria-current="page"', response.text)
         self.assertIn("Delete permanently", response.text)
-
-    def test_permanent_delete_requires_exact_key_confirmation(self):
-        with patch(
-            "ui.deleted_records.deleted_record_service."
-            "permanently_delete_prompt"
-        ) as permanently_delete:
-            response = self.client.post(
-                "/deleted/prompts/prompt.deleted/permanent-delete",
-                data={"confirm_key": "wrong.key"},
-                follow_redirects=False,
-            )
-
-        self.assertEqual(response.status_code, 422)
-        self.assertIn("exact stable key", response.text)
-        permanently_delete.assert_not_called()
+        self.assertNotIn('name="confirm_key"', response.text)
 
     def test_permanent_prompt_delete_uses_prg(self):
         with patch(
@@ -83,7 +69,6 @@ class DeletedRecordsUiTests(unittest.TestCase):
         ) as permanently_delete:
             response = self.client.post(
                 "/deleted/prompts/prompt.deleted/permanent-delete",
-                data={"confirm_key": "prompt.deleted"},
                 follow_redirects=False,
             )
 
@@ -101,7 +86,6 @@ class DeletedRecordsUiTests(unittest.TestCase):
         ) as permanently_delete:
             response = self.client.post(
                 "/deleted/families/family.deleted/permanent-delete",
-                data={"confirm_key": "family.deleted"},
                 follow_redirects=False,
             )
 
@@ -115,7 +99,6 @@ class DeletedRecordsUiTests(unittest.TestCase):
         ) as permanently_delete:
             response = self.client.post(
                 "/deleted/prompts/prompt.deleted/permanent-delete",
-                data={"confirm_key": "prompt.deleted"},
                 headers={"Origin": "https://example.com"},
             )
 
