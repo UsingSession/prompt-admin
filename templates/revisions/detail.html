@@ -14,8 +14,12 @@
     </p>
   </div>
   <div class="page-actions">
+    <a class="button"
+      href="/prompts/{{ prompt.prompt_key }}/variants/{{ variant.variant_key }}/revisions/{{ revision.revision_number }}/compiled-preview">
+      Preview with current Hooks
+    </a>
     {% if variant.status != "archived" %}
-      <a class="button"
+      <a class="button secondary"
         href="/prompts/{{ prompt.prompt_key }}/variants/{{ variant.variant_key }}/revisions/new?from_revision={{ revision.revision_number }}">
         Create New Revision from This
       </a>
