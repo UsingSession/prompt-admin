@@ -4,7 +4,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from schemas.prompt import StableKey
-from services import deleted_record_service, prompt_service
+from services import deleted_record_service, hook_service, prompt_service
 
 
 router = APIRouter(include_in_schema=False)
@@ -29,6 +29,11 @@ def _render(
         for prompt in prompt_service.list_prompts(include_deleted=True)
         if prompt["deleted_at"] is not None
     ]
+    deleted_hooks = [
+        hook
+        for hook in hook_service.list_hooks(include_deleted=True)
+        if hook["deleted_at"] is not None
+    ]
     prompt_counts = {
         family["family_key"]: len(
             prompt_service.list_prompts(
@@ -50,6 +55,7 @@ def _render(
             "error_message": error_message,
             "families": deleted_families,
             "prompts": deleted_prompts,
+            "hooks": deleted_hooks,
             "prompt_counts": prompt_counts,
         },
         status_code=status_code,
