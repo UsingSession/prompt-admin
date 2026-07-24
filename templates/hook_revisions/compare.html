@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}Compare Hook Revisions | Prompt Admin{% endblock %}
+
+{% block content %}
+<section class="page-header">
+  <div>
+    <p class="eyebrow">Hook Revision comparison</p>
+    <h1>Compare Revisions</h1>
+    <p class="page-description">
+      <a href="/hooks/{{ hook.hook_key }}"><code>{{ hook.hook_key }}</code></a>
+    </p>
+  </div>
+</section>
+
+{% if revisions|length < 2 %}
+  <section class="panel empty-state">
+    At least two Hook Revisions are required for comparison.
+  </section>
+{% else %}
+  <form class="filter-form comparison-form" method="get"
+    action="/hooks/{{ hook.hook_key }}/compare">
+    <div class="filter-field">
+      <label for="from_revision">From Revision</label>
+      <select id="from_revision" name="from_revision" required>
+        {% for item in revisions %}
+          <option value="{{ item.revision_number }}"
+            {% if old_revision and old_revision.revision_number == item.revision_number %}selected{% endif %}>
+            r{{ item.revision_number }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filter-field">
+      <label for="to_revision">To Revision</label>
+      <select id="to_revision" name="to_revision" required>
+        {% for item in revisions %}
+          <option value="{{ item.revision_number }}"
+            {% if new_revision and new_revision.revision_number == item.revision_number %}selected{% endif %}>
+            r{{ item.revision_number }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filter-actions">
+      <button type="submit">Compare</button>
+    </div>
+  </form>
+
+  {% if old_revision and new_revision %}
+    <section class="comparison-metadata">
+      <article class="panel">
+        <h2>From r{{ old_revision.revision_number }}</h2>
+        <dl class="meta-list compact-meta">
+          <div><dt>Hook group</dt><dd><code>#{{ old_revision.hook_group }}</code></dd></div>
+          <div><dt>Priority</dt><dd>{{ old_revision.priority }}</dd></div>
+          <div><dt>Enabled</dt><dd>{{ "yes" if old_revision.is_enabled else "no" }}</dd></div>
+          <div><dt>Change note</dt><dd>{{ old_revision.change_note or "—" }}</dd></div>
+          <div><dt>Created</dt><dd>{{ old_revision.created_at }}</dd></div>
+        </dl>
+        <a href="/hooks/{{ hook.hook_key }}/revisions/{{ old_revision.revision_number }}">
+          Open Revision
+        </a>
+      </article>
+      <article class="panel">
+        <h2>To r{{ new_revision.revision_number }}</h2>
+        <dl class="meta-list compact-meta">
+          <div><dt>Hook group</dt><dd><code>#{{ new_revision.hook_group }}</code></dd></div>
+          <div><dt>Priority</dt><dd>{{ new_revision.priority }}</dd></div>
+          <div><dt>Enabled</dt><dd>{{ "yes" if new_revision.is_enabled else "no" }}</dd></div>
+          <div><dt>Change note</dt><dd>{{ new_revision.change_note or "—" }}</dd></div>
+          <div><dt>Created</dt><dd>{{ new_revision.created_at }}</dd></div>
+        </dl>
+        <a href="/hooks/{{ hook.hook_key }}/revisions/{{ new_revision.revision_number }}">
+          Open Revision
+        </a>
+      </article>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Metadata differences</h2>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th scope="col">Field</th>
+              <th scope="col">From</th>
+              <th scope="col">To</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for field, old_value, new_value in [
+              ("Hook group", old_revision.hook_group, new_revision.hook_group),
+              ("Priority", old_revision.priority, new_revision.priority),
+              ("Enabled", old_revision.is_enabled, new_revision.is_enabled),
+              ("Change note", old_revision.change_note, new_revision.change_note),
+              ("Created", old_revision.created_at, new_revision.created_at)
+            ] %}
+              <tr{% if old_value != new_value %} class="metadata-changed"{% endif %}>
+                <th scope="row">{{ field }}</th>
+                <td>{{ old_value }}</td>
+                <td>{{ new_value }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header"><h2>Unified content diff</h2></div>
+      {% if unified_lines %}
+        <pre class="unified-diff"><code>{% for line in unified_lines %}<span class="diff-line {% if line.startswith('+') and not line.startswith('+++') %}diff-added{% elif line.startswith('-') and not line.startswith('---') %}diff-removed{% elif line.startswith('@@') %}diff-hunk{% endif %}">{{ line }}</span>
+{% endfor %}</code></pre>
+      {% else %}
+        <div class="empty-state">The selected Hook contents are identical.</div>
+      {% endif %}
+    </section>
+
+    <section class="panel">
+      <div class="panel-header"><h2>Side-by-side content diff</h2></div>
+      <div class="table-wrap">
+        <table class="data-table diff-table">
+          <thead>
+            <tr>
+              <th scope="col">Old line</th>
+              <th scope="col">From r{{ old_revision.revision_number }}</th>
+              <th scope="col">New line</th>
+              <th scope="col">To r{{ new_revision.revision_number }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in side_rows %}
+              <tr class="diff-row diff-{{ row.kind }}">
+                <td class="line-number">{{ row.left_number or "" }}</td>
+                <td><code>{{ row.left_text }}</code></td>
+                <td class="line-number">{{ row.right_number or "" }}</td>
+                <td><code>{{ row.right_text }}</code></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  {% endif %}
+{% endif %}
+{% endblock %}
