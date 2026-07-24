@@ -1,36 +1,34 @@
 # Prompt Admin
 
 Prompt Admin is a local, generic prompt-management service backed by
-PostgreSQL. It owns prompt-management application logic, UI and API behavior,
+PostgreSQL. It owns application behavior, API and server-rendered UI contracts,
 database migrations, tests, Docker image construction, and releases.
 
-Prompt Admin does not own workflow graphs, model calls, Qdrant datasets,
-project-specific prompts, or `UsingSession/localai` orchestration.
+It does not own workflow graphs, model calls, Qdrant datasets,
+project-specific records, or `UsingSession/localai` orchestration.
 
 ## Current implementation
 
-Prompt Admin v2 Phase 3B provides:
+Prompt Admin v2 Phase 4A provides:
 
 - FastAPI application factory and Uvicorn runtime;
-- lifespan-based PostgreSQL initialization;
-- a clean v2 database schema;
-- explicit `psycopg` SQL and transaction helpers;
-- versioned Prompt-domain management API;
-- server-rendered Prompt management UI;
-- Prompt Family create, read, update, soft delete, and restore workflows;
-- Prompt metadata create, read, update, soft delete, and restore workflows;
-- a deleted-record basket with permanent deletion;
-- Prompt Variant create, read, update, and lifecycle status workflows;
-- immutable Prompt Revision creation, history, detail, and comparison;
-- unified and side-by-side Revision diffs;
-- concurrency-safe Revision numbering;
-- stable domain error codes;
-- Pydantic API and HTML form-boundary validation;
-- real PostgreSQL domain and UI integration tests;
-- Docker startup and health smoke tests.
+- lifespan-based PostgreSQL initialization and ordered migrations;
+- explicit parameterized `psycopg` repositories and transactions;
+- Prompt Family, Prompt, Prompt Variant, and immutable Prompt Revision API;
+- server-rendered Prompt administration UI and Revision comparison;
+- Deleted Records lifecycle for Families and Prompts;
+- Hook metadata management API;
+- immutable Hook Revision creation and history;
+- concurrency-safe Prompt and Hook Revision numbering;
+- deterministic Hook placeholder compilation;
+- preview and strict compiler modes;
+- read-only Prompt Revision compiled-preview endpoint;
+- strict Pydantic request and response schemas;
+- stable machine-readable errors;
+- unit, API, and real PostgreSQL tests.
 
-Hooks, Bundles, publication, compiled artifacts, the final runtime Bundle API,
-and import/export remain deferred.
+Hook administration UI, Bundles, publication, immutable Compiled Artifacts, the
+final runtime Bundle API, ETag support, and import/export remain deferred.
 
 ## Local endpoints
 
@@ -54,8 +52,7 @@ GET /healthz
 ```
 
 The service is local-only. Bind it to `127.0.0.1` through the infrastructure
-repository and do not expose it publicly without authentication and deployment
-controls.
+repository. Authentication is required before LAN or public exposure.
 
 ## Configuration
 
@@ -78,7 +75,30 @@ exactly and are not whitespace-normalized.
 uvicorn app:create_app --factory --host 0.0.0.0 --port 8090
 ```
 
-The Docker image uses the same application factory entrypoint.
+## Architecture
+
+API requests use:
+
+```text
+FastAPI API route
+-> Pydantic boundary schema
+-> domain or compiler service
+-> explicit psycopg repository
+-> PostgreSQL
+```
+
+Browser administration uses:
+
+```text
+FastAPI UI route
+-> Pydantic form boundary
+-> domain service
+-> explicit psycopg repository
+-> Jinja2 response or 303 redirect
+```
+
+UI handlers do not issue loopback HTTP calls or execute SQL. Core
+administration works without JavaScript.
 
 ## Prompt domain
 
@@ -90,15 +110,8 @@ Prompt Family
       └─ Prompt Revision 2
 ```
 
-- A Family is optional organizational metadata.
-- A Prompt is a stable logical task and input/output contract.
-- A Variant is an alternative implementation of the same contract.
-- A Revision is an immutable prompt-text snapshot.
-
-Prompt text exists only in `ai_prompt_revisions`. Prompt rows contain metadata
-only.
-
-Variant statuses are:
+Prompt rows contain metadata only. Prompt text is stored in immutable Prompt
+Revisions. Variant statuses are:
 
 ```text
 draft
@@ -106,121 +119,9 @@ available
 archived
 ```
 
-`production` is not a Variant status. Production selection belongs to a future
-published Bundle Revision.
+`production` belongs to a future published Bundle Revision, not a Variant.
 
-Detailed domain and API behavior:
-
-```text
-docs/prompt-domain-api.md
-docs/prompt-management-ui.md
-```
-
-## Server-rendered UI
-
-The UI uses:
-
-```text
-FastAPI UI route
--> parse path, query, or URL-encoded form data
--> construct existing Pydantic command schema
--> call Prompt-domain service
--> render Jinja2 or return 303 redirect
-```
-
-The UI does not call `/api/v1` over HTTP and does not execute SQL. API and UI
-handlers use the same Prompt-domain service layer.
-
-Core management works without JavaScript. HTML mutations use Post/Redirect/Get.
-
-Active navigation is intentionally limited to:
-
-```text
-Dashboard
-Prompts
-Families
-Deleted Records
-FastAPI documentation
-```
-
-Hooks, Bundles, import/export, and runtime artifacts are not presented as active
-features before their implementation phases.
-
-### UI routes
-
-Dashboard:
-
-```http
-GET /
-```
-
-Families:
-
-```http
-GET  /families
-GET  /families/new
-POST /families
-GET  /families/{family_key}
-GET  /families/{family_key}/edit
-POST /families/{family_key}/edit
-POST /families/{family_key}/delete
-POST /families/{family_key}/restore
-```
-
-Prompts:
-
-```http
-GET  /prompts
-GET  /prompts/new
-POST /prompts
-GET  /prompts/{prompt_key}
-GET  /prompts/{prompt_key}/edit
-POST /prompts/{prompt_key}/edit
-POST /prompts/{prompt_key}/delete
-POST /prompts/{prompt_key}/restore
-```
-
-Deleted Records:
-
-```http
-GET  /deleted
-POST /deleted/families/{family_key}/permanent-delete
-POST /deleted/prompts/{prompt_key}/permanent-delete
-```
-
-Variants:
-
-```http
-GET  /prompts/{prompt_key}/variants/new
-POST /prompts/{prompt_key}/variants
-GET  /prompts/{prompt_key}/variants/{variant_key}
-GET  /prompts/{prompt_key}/variants/{variant_key}/edit
-POST /prompts/{prompt_key}/variants/{variant_key}/edit
-```
-
-Revisions:
-
-```http
-GET  /prompts/{prompt_key}/variants/{variant_key}/revisions/new
-POST /prompts/{prompt_key}/variants/{variant_key}/revisions
-GET  /prompts/{prompt_key}/variants/{variant_key}/revisions/{revision}
-GET  /prompts/{prompt_key}/variants/{variant_key}/compare
-```
-
-The compare route accepts:
-
-```text
-?from_revision=2&to_revision=5
-```
-
-Only Revisions under the Prompt Variant identified by the route are loaded.
-
-## Management API
-
-The versioned `/api/v1` Prompt-domain management API remains unchanged by the
-UI implementation.
-
-Families:
+Prompt management API:
 
 ```http
 GET    /api/v1/families
@@ -229,22 +130,14 @@ GET    /api/v1/families/{family_key}
 PATCH  /api/v1/families/{family_key}
 DELETE /api/v1/families/{family_key}
 POST   /api/v1/families/{family_key}/restore
-```
 
-Prompts:
-
-```http
 GET    /api/v1/prompts
 POST   /api/v1/prompts
 GET    /api/v1/prompts/{prompt_key}
 PATCH  /api/v1/prompts/{prompt_key}
 DELETE /api/v1/prompts/{prompt_key}
 POST   /api/v1/prompts/{prompt_key}/restore
-```
 
-Variants and Revisions:
-
-```http
 GET   /api/v1/prompts/{prompt_key}/variants
 POST  /api/v1/prompts/{prompt_key}/variants
 GET   /api/v1/prompts/{prompt_key}/variants/{variant_key}
@@ -255,74 +148,161 @@ POST /api/v1/prompts/{prompt_key}/variants/{variant_key}/revisions
 GET  /api/v1/prompts/{prompt_key}/variants/{variant_key}/revisions/{revision}
 ```
 
-Prompt Revisions expose no update or delete route.
+Prompt Revision update and delete routes do not exist.
 
-## Lifecycle behavior
+## Hook domain
 
-Families and Prompts use soft deletion and explicit restoration. Deleted
-records are displayed as deleted and are never presented as active.
+```text
+Hook metadata
+└─ immutable Hook Revisions
+```
 
-Soft-deleted Families and Prompts remain in `/deleted`. Their stable keys remain
-reserved while restoration is possible. A record must be deleted permanently
-before the same stable key can be used by a new entity.
+A Hook row stores:
 
-Permanent deletion is a direct basket action and is available only for already
-soft-deleted records.
+```text
+hook_key
+display_name
+description
+category
+created_at
+updated_at
+deleted_at
+```
 
-Deleting a Family permanently detaches associated Prompts through the existing
-foreign-key behavior. It does not delete those Prompts.
+A Hook Revision stores:
 
-Deleting a Prompt permanently removes its Variants and Revisions. The operation
-is blocked when a Revision is referenced by a Bundle item, preserving immutable
-runtime references.
+```text
+revision_number
+hook_group
+hook_content
+priority
+is_enabled
+change_note
+created_at
+```
 
-Variants use `draft`, `available`, and `archived`. Variant deletion is not
-implemented. Archived Variants retain immutable Revision history but reject new
-Revision creation.
+Hook management API:
 
-Prompt Revisions are immutable. Existing Revision pages provide no edit or
-delete controls. An old Revision may be copied into the create form, but saving
-always creates a new Revision.
+```http
+GET    /api/v1/hooks
+POST   /api/v1/hooks
+GET    /api/v1/hooks/{hook_key}
+PATCH  /api/v1/hooks/{hook_key}
+DELETE /api/v1/hooks/{hook_key}
+POST   /api/v1/hooks/{hook_key}/restore
 
-## Revision comparison
+GET  /api/v1/hooks/{hook_key}/revisions
+POST /api/v1/hooks/{hook_key}/revisions
+GET  /api/v1/hooks/{hook_key}/revisions/{revision}
+```
 
-Revision comparison uses Python `difflib` and performs no writes.
+Hook Revision update and delete routes do not exist. Hook deletion is soft;
+permanent deletion is not implemented in Phase 4A.
 
-The page provides:
+The effective Hook Revision is always the highest `revision_number`. The
+compiler never falls back to an older enabled Revision. A disabled latest
+Revision or deleted Hook contributes nothing.
 
-- explicit old and new Revision selection;
-- old and new metadata;
-- unified diff;
-- side-by-side diff;
-- line numbers;
-- whitespace-preserving Prompt text;
-- links to both Revision detail pages;
-- an empty state when fewer than two Revisions exist.
+Concurrent Hook Revision creation locks the Hook row with
+`SELECT ... FOR UPDATE` before calculating and inserting the next number.
 
-Jinja2 autoescaping remains enabled. Prompt and diff content is never inserted
-as trusted HTML.
+Detailed Hook documentation:
 
-## Stable keys
+```text
+docs/hook-domain-api.md
+docs/hook-compiler.md
+```
 
-`family_key`, `prompt_key`, and `variant_key` are immutable after creation.
+## Hook compiler
 
-The application rejects:
+Prompt placeholders use:
 
-- empty or whitespace-only keys;
-- surrounding whitespace;
-- keys longer than 120 characters;
-- revision suffixes such as `_v1` and `_v2`.
+```text
+#hook_global.response_rules
+```
 
-Invalid keys are not silently normalized. Duplicate active and deleted stable
-keys are not allowed because they would make read and restore operations
-ambiguous.
+The stored group omits `#`:
+
+```text
+hook_global.response_rules
+```
+
+The compiler:
+
+1. scans placeholders left to right;
+2. deduplicates detected-group metadata;
+3. loads effective Revisions with one repository query;
+4. orders contributors by `priority ASC`, then `hook_key ASC`;
+5. joins contents using `\n\n`;
+6. replaces every recognized occurrence without changing other text.
+
+Preview mode preserves unresolved tokens and reports unresolved groups. Strict
+mode fails with `unresolved_hook_groups` and returns no successful partial
+result.
+
+Prompt Revision compiled preview:
+
+```http
+GET /api/v1/prompts/{prompt_key}/variants/{variant_key}/revisions/
+    {revision}/compiled-preview
+```
+
+The endpoint compiles an exact immutable Prompt Revision against current Hook
+state. It is a mutable administration preview, not a published runtime artifact
+or n8n production contract.
+
+The low-level compiler accepts a caller-provided PostgreSQL cursor so future
+Bundle publication can compile inside one publication transaction.
+
+## Stable keys and validation
+
+`family_key`, `prompt_key`, `variant_key`, and `hook_key` are immutable. The
+application rejects empty keys, surrounding whitespace, values over 120
+characters, and `_vN` Revision suffixes. Invalid values are not normalized.
+
+Hook groups must match:
+
+```text
+hook_[A-Za-z0-9_.-]+
+```
+
+They are stored without a leading `#`. Hook content must contain visible
+characters. Priority must be non-negative.
+
+## Errors
+
+API errors use:
+
+```json
+{
+  "error": {
+    "code": "hook_not_found",
+    "message": "Hook was not found."
+  }
+}
+```
+
+Hook and compiler codes include:
+
+```text
+hook_not_found
+hook_key_conflict
+hook_deleted
+hook_revision_not_found
+hook_revision_conflict
+invalid_hook_group
+invalid_hook_priority
+unresolved_hook_groups
+database_unavailable
+```
+
+SQL, table names, raw PostgreSQL messages, connection details, stack traces,
+and Prompt or Hook content are not exposed in normal responses or logs.
 
 ## Security
 
-Browser writes using `POST`, `PUT`, `PATCH`, or `DELETE` validate `Origin` when
-present and otherwise validate `Referer`.
-
-Accepted browser hosts are exact matches:
+Browser writes validate `Origin`, or `Referer` when Origin is absent. Accepted
+hosts are exact matches:
 
 ```text
 localhost
@@ -330,53 +310,30 @@ localhost
 ::1
 ```
 
-Malicious prefix or subdomain values such as `localhost.evil.example` are
-rejected. Requests without either header remain supported for local non-browser
-clients.
-
-All responses retain:
+Prefix and subdomain values such as `localhost.evil.example` are rejected.
+Requests without either header remain supported for local non-browser clients.
+All responses include:
 
 ```text
 Cache-Control: no-cache
 ```
 
-Prompt text is not logged by UI handlers. Raw SQL or PostgreSQL exception
-details are not rendered. Permanent deletion remains protected by the common
-Origin or Referer validation and domain lifecycle rules.
-
 ## Database initialization
 
-The PostgreSQL database was intentionally reset before Phase 2. No legacy data
-migration, conversion, or compatibility path is implemented.
-
-Startup runs:
-
-```text
-database/schema.sql
--> creates prompt_admin_migrations only
--> applies unapplied SQL files from database/migrations in filename order
-```
-
-The v2 baseline migration is:
+Startup applies `database/schema.sql`, then ordered files in
+`database/migrations/`. The v2 baseline remains:
 
 ```text
 database/migrations/005_prompt_model_v2.sql
 ```
 
-Repeated startup is idempotent. Startup acquires a PostgreSQL advisory
-transaction lock and validates migration metadata against the expected v2
-tables.
-
-Recovery and schema details:
-
-```text
-docs/v2-database-recovery.md
-docs/v2-database-schema.md
-```
+Phase 4A requires no schema migration. Existing Hook tables and constraints are
+used unchanged. Repeated startup is idempotent and concurrent startup is
+serialized with a PostgreSQL advisory transaction lock.
 
 ## Tests
 
-Install development dependencies:
+Install dependencies:
 
 ```bash
 python -m pip install -r requirements-dev.txt
@@ -388,54 +345,34 @@ Run the complete suite against a dedicated PostgreSQL database:
 python -m unittest discover -s tests -p "test_*.py"
 ```
 
-Coverage includes:
+Coverage includes Prompt API/UI regressions, Hook lifecycle and immutability,
+concurrent Hook Revision creation, effective Revision selection, parser and
+deterministic ordering, preview and strict modes, compiled preview, OpenAPI,
+exact-origin safeguards, database startup, Docker build, and `/healthz`.
 
-- application shell and active navigation;
-- HTML form validation and preserved values;
-- Post/Redirect/Get behavior;
-- Family, Prompt, and Variant management pages;
-- soft delete, basket, restore, and permanent deletion;
-- direct permanent-delete button behavior;
-- stable-key reuse after permanent deletion;
-- referenced Revision protection during permanent deletion;
-- immutable Revision creation and detail;
-- archived Variant restrictions;
-- unified and side-by-side comparison;
-- escaped Prompt and diff content;
-- comparison read-only behavior;
-- unchanged `/api/v1` OpenAPI routes;
-- exact local-origin safeguards;
-- real PostgreSQL UI lifecycle flows;
-- fresh and repeated database startup;
-- Docker image build and `/healthz`.
+## UI scope
+
+Active navigation remains:
+
+```text
+Dashboard
+Prompts
+Families
+Deleted Records
+FastAPI documentation
+```
+
+`/hooks` remains unregistered and returns the normal HTML `404` until Phase 4B.
 
 ## Removed pre-v2 routes
 
-Backward compatibility with the pre-v2 domain is intentionally not provided.
-
-Removed examples include:
-
-```http
-GET  /api-docs
-GET  /api/prompts/compiled
-POST /save
-POST /delete
-```
-
-The root path is now the v2 administration dashboard. Other removed routes
-remain unregistered and return normal `404` responses.
-
-A `503` is used only when service availability is actually involved.
+Pre-v2 routes such as `/api-docs`, `/api/prompts/compiled`, `/save`, and
+`/delete` remain unregistered. No compatibility path is provided.
 
 ## Deferred work
 
-Later phases own:
-
-- Hook management and immutable Hook Revisions;
-- hook compilation;
-- Bundles, publication, and compiled artifacts;
-- compiled Bundle runtime endpoints and ETag support;
-- v2 import and export;
-- n8n integration changes;
-- `UsingSession/localai` image updates;
-- project-specific prompts and seed data.
+- Phase 4B: Hook UI, Revision comparison, and impact views;
+- Phase 5: Bundles, publication, immutable artifacts, and hashing;
+- Phase 6: final Bundle runtime API and ETag support;
+- Phase 7: v2 import/export and remaining administration UX;
+- Phase 8: release, `localai` image pinning, and n8n migration.
