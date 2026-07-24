@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Hooks | Prompt Admin{% endblock %}
+
+{% block content %}
+<section class="page-header">
+  <div>
+    <p class="eyebrow">Hook administration</p>
+    <h1>Hooks</h1>
+    <p class="page-description">
+      Manage stable Hook metadata and immutable Hook Revisions.
+    </p>
+  </div>
+  <div class="page-actions">
+    <a class="button" href="/hooks/new">Create Hook</a>
+  </div>
+</section>
+
+<section class="panel filter-panel">
+  <form method="get" action="/hooks" class="filter-form">
+    <label>
+      Category
+      <select name="category">
+        <option value="">All categories</option>
+        {% for category in categories %}
+          <option value="{{ category }}"
+            {% if filters.category == category %}selected{% endif %}>
+            {{ category }}
+          </option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Lifecycle state
+      <select name="state">
+        {% for state in ["active", "deleted", "all"] %}
+          <option value="{{ state }}"
+            {% if filters.state == state %}selected{% endif %}>
+            {{ state|title }}
+          </option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit">Apply filters</button>
+  </form>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <h2>Hook records</h2>
+      <p>Lifecycle and effective contribution are shown separately.</p>
+    </div>
+  </div>
+  {% if hooks %}
+    <div class="table-wrap">
+      <table class="data-table hook-table">
+        <thead>
+          <tr>
+            <th scope="col">Hook</th>
+            <th scope="col">Category</th>
+            <th scope="col">Lifecycle</th>
+            <th scope="col">Effective contribution</th>
+            <th scope="col">Latest Revision</th>
+            <th scope="col">Hook group</th>
+            <th scope="col">Priority</th>
+            <th scope="col">Updated</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for hook in hooks %}
+            <tr{% if hook.deleted_at %} class="deleted-record"{% endif %}>
+              <td>
+                <strong>
+                  <a href="/hooks/{{ hook.hook_key }}">
+                    {{ hook.display_name }}
+                  </a>
+                </strong><br>
+                <code>{{ hook.hook_key }}</code>
+              </td>
+              <td>{{ hook.category or "—" }}</td>
+              <td>
+                {% if hook.deleted_at %}
+                  <span class="badge badge-deleted">deleted</span>
+                {% else %}
+                  <span class="badge badge-active">active</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if hook.deleted_at %}
+                  <span class="badge badge-disabled">not contributing</span>
+                {% elif hook.revision_number is none %}
+                  <span class="badge badge-neutral">no Revision</span>
+                {% elif hook.is_enabled %}
+                  <span class="badge badge-enabled">enabled</span>
+                {% else %}
+                  <span class="badge badge-disabled">disabled</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if hook.revision_number is none %}
+                  No Revisions
+                {% else %}
+                  <a href="/hooks/{{ hook.hook_key }}/revisions/{{ hook.revision_number }}">
+                    r{{ hook.revision_number }}
+                  </a>
+                {% endif %}
+              </td>
+              <td>
+                {% if hook.hook_group %}<code>#{{ hook.hook_group }}</code>{% else %}—{% endif %}
+              </td>
+              <td>{{ hook.priority if hook.priority is not none else "—" }}</td>
+              <td>{{ hook.updated_at }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty-state">
+      No Hooks match the selected filters.
+    </div>
+  {% endif %}
+</section>
+{% endblock %}
