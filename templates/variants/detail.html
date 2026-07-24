@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}{{ variant.display_name }} | Prompt Admin{% endblock %}
+
+{% block content %}
+<section class="page-header">
+  <div>
+    <p class="eyebrow">Prompt Variant</p>
+    <h1>{{ variant.display_name }}</h1>
+    <p class="page-description">
+      <a href="/prompts/{{ prompt.prompt_key }}">
+        <code>{{ prompt.prompt_key }}</code>
+      </a>
+      / <code>{{ variant.variant_key }}</code>
+    </p>
+  </div>
+  <div class="page-actions">
+    {% if variant.status != "archived" %}
+      <a class="button"
+        href="/prompts/{{ prompt.prompt_key }}/variants/{{ variant.variant_key }}/revisions/new">
+        Create Revision
+      </a>
+    {% endif %}
+    <a class="button secondary"
+      href="/prompts/{{ prompt.prompt_key }}/variants/{{ variant.variant_key }}/edit">
+      Edit Variant
+    </a>
+    <a class="button secondary"
+      href="/prompts/{{ prompt.prompt_key }}/variants/{{ variant.variant_key }}/compare">
+      Compare Revisions
+    </a>
+  </div>
+</section>
+
+{% if variant.status == "archived" %}
+  <div class="alert alert-warning" role="status">
+    This Variant is archived. Revision history remains readable, but new
+    Revisions cannot be created.
+  </div>
+{% endif %}
+
+<section class="panel">
+  <div class="panel-header">
+    <h2>Metadata</h2>
+    <span class="badge badge-{{ variant.status }}">{{ variant.status }}</span>
+  </div>
+  <dl class="meta-list">
+    <div><dt>Variant key</dt><dd><code>{{ variant.variant_key }}</code></dd></div>
+    <div><dt>Created</dt><dd>{{ variant.created_at }}</dd></div>
+    <div><dt>Updated</dt><dd>{{ variant.updated_at }}</dd></div>
+  </dl>
+  <p class="preserve-lines">{{ variant.description or "No description." }}</p>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <h2>Revision history</h2>
+      <p>Revisions are immutable and ordered by Revision number.</p>
+    </div>
+  </div>
+  {% if revisions %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Revision</th>
+            <th scope="col">Created</th>
+            <th scope="col">Change note</th>
+            <th scope="col">State</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for revision in revisions %}
+            <tr>
+              <td>
+                <a href="/prompts/{{ prompt.prompt_key }}/variants/{{ variant.variant_key }}/revisions/{{ revision.revision_number }}">
+                  r{{ revision.revision_number }}
+                </a>
+              </td>
+              <td>{{ revision.created_at }}</td>
+              <td>{{ revision.change_note or "—" }}</td>
+              <td><span class="badge badge-immutable">immutable</span></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty-state">
+      No Revisions exist for this Variant.
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Create Revision | Prompt Admin{% endblock %}
+
+{% block content %}
+<section class="page-header">
+  <div>
+    <p class="eyebrow">Immutable Prompt Revision</p>
+    <h1>Create Revision</h1>
+    <p class="page-description">
+      <a href="/prompts/{{ prompt.prompt_key }}/variants/{{ variant.variant_key }}">
+        <code>{{ prompt.prompt_key }}@{{ variant.variant_key }}</code>
+      </a>
+    </p>
+  </div>
+</section>
+
+{% if source_revision %}
+  <div class="alert alert-info" role="status">
+    Content was copied from immutable Revision
+    r{{ source_revision.revision_number }}. Saving creates a new Revision.
+  </div>
+{% endif %}
+
+{% if error_summary %}
+  <div class="alert alert-error" role="alert">{{ error_summary }}</div>
+{% endif %}
+
+{% if can_create %}
+  <form class="panel form-panel" method="post"
+    action="/prompts/{{ prompt.prompt_key }}/variants/{{ variant.variant_key }}/revisions">
+    <div class="field-group">
+      <label for="change_note">Change note</label>
+      <input
+        id="change_note"
+        name="change_note"
+        value="{{ form.change_note }}"
+      >
+    </div>
+
+    <div class="field-group">
+      <label for="system_prompt">System Prompt</label>
+      <textarea
+        id="system_prompt"
+        name="system_prompt"
+        class="prompt-textarea"
+        spellcheck="false"
+        required
+        {% if errors.system_prompt %}aria-invalid="true"
+        aria-describedby="system_prompt-errors"{% endif %}
+      >{{ form.system_prompt }}</textarea>
+      {% if errors.system_prompt %}
+        <ul class="field-errors" id="system_prompt-errors">
+          {% for error in errors.system_prompt %}<li>{{ error }}</li>{% endfor %}
+        </ul>
+      {% endif %}
+      <p class="help-text">
+        Whitespace is stored as submitted. Existing Revisions cannot be edited.
+      </p>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit">Create Immutable Revision</button>
+      <a class="button secondary"
+        href="/prompts/{{ prompt.prompt_key }}/variants/{{ variant.variant_key }}">
+        Cancel
+      </a>
+    </div>
+  </form>
+{% else %}
+  <section class="panel empty-state">
+    This Variant is archived and cannot receive new Revisions.
+    <a href="/prompts/{{ prompt.prompt_key }}/variants/{{ variant.variant_key }}">
+      Return to Variant
+    </a>
+  </section>
+{% endif %}
+{% endblock %}

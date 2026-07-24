@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Deleted Records | Prompt Admin{% endblock %}
+
+{% block content %}
+<section class="page-header">
+  <div>
+    <p class="eyebrow">Administration</p>
+    <h1>Deleted Records</h1>
+    <p class="page-description">
+      Restore soft-deleted records or delete them permanently to release their
+      stable keys.
+    </p>
+  </div>
+</section>
+
+{% if error_message %}
+  <div class="alert alert-error" role="alert">{{ error_message }}</div>
+{% endif %}
+
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <h2>Families</h2>
+      <p>Permanent deletion detaches associated Prompts from the Family.</p>
+    </div>
+  </div>
+  {% if families %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Family</th>
+            <th scope="col">Associated Prompts</th>
+            <th scope="col">Deleted</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for family in families %}
+            <tr class="deleted-record">
+              <td>
+                <strong>{{ family.display_name }}</strong><br>
+                <code>{{ family.family_key }}</code>
+              </td>
+              <td>{{ prompt_counts[family.family_key] }}</td>
+              <td>{{ family.deleted_at }}</td>
+              <td>
+                <div class="row-actions">
+                  <form method="post"
+                    action="/families/{{ family.family_key }}/restore">
+                    <button class="secondary" type="submit">Restore</button>
+                  </form>
+                  <form method="post"
+                    action="/deleted/families/{{ family.family_key }}/permanent-delete">
+                    <button class="danger" type="submit">
+                      Delete permanently
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty-state">No deleted Families.</div>
+  {% endif %}
+</section>
+
+<section class="panel deleted-section">
+  <div class="panel-header">
+    <div>
+      <h2>Prompts</h2>
+      <p>
+        Permanent deletion removes all Variants and Revisions. It is blocked
+        when a Revision is referenced by a Bundle item.
+      </p>
+    </div>
+  </div>
+  {% if prompts %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Prompt</th>
+            <th scope="col">Category</th>
+            <th scope="col">Deleted</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for prompt in prompts %}
+            <tr class="deleted-record">
+              <td>
+                <strong>{{ prompt.display_name }}</strong><br>
+                <code>{{ prompt.prompt_key }}</code>
+              </td>
+              <td>{{ prompt.category or "—" }}</td>
+              <td>{{ prompt.deleted_at }}</td>
+              <td>
+                <div class="row-actions">
+                  <form method="post"
+                    action="/prompts/{{ prompt.prompt_key }}/restore">
+                    <button class="secondary" type="submit">Restore</button>
+                  </form>
+                  <form method="post"
+                    action="/deleted/prompts/{{ prompt.prompt_key }}/permanent-delete">
+                    <button class="danger" type="submit">
+                      Delete permanently
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty-state">No deleted Prompts.</div>
+  {% endif %}
+</section>
+{% endblock %}

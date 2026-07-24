@@ -46,11 +46,21 @@ class PromptAdminFastApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.json()["error"]["code"], "not_found")
 
-    def test_removed_legacy_root_returns_normal_404(self):
-        response = self.client.get("/")
+    def test_root_renders_prompt_admin_dashboard(self):
+        with (
+            patch(
+                "ui.prompt_management.prompt_service.list_families",
+                return_value=[],
+            ),
+            patch(
+                "ui.prompt_management.prompt_service.list_prompts",
+                return_value=[],
+            ),
+        ):
+            response = self.client.get("/")
 
-        self.assertEqual(response.status_code, 404)
-        self.assertIn("404 Not Found", response.text)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Dashboard", response.text)
         self.assertEqual(
             response.headers["content-type"].split(";")[0],
             "text/html",
@@ -126,7 +136,6 @@ class PromptAdminFastApiTests(unittest.TestCase):
         with patch("app.init_database") as initialize_database:
             with TestClient(application):
                 pass
-
         initialize_database.assert_called_once_with()
 
 

@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}{{ heading }} | Prompt Admin{% endblock %}
+
+{% block content %}
+<section class="page-header">
+  <div>
+    <p class="eyebrow">Prompt Variant</p>
+    <h1>{{ heading }}</h1>
+    <p class="page-description">
+      Parent Prompt:
+      <a href="/prompts/{{ prompt.prompt_key }}">
+        <code>{{ prompt.prompt_key }}</code>
+      </a>
+    </p>
+  </div>
+</section>
+
+{% if error_summary %}
+  <div class="alert alert-error" role="alert">{{ error_summary }}</div>
+{% endif %}
+
+<form class="panel form-panel" method="post" action="{{ action }}">
+  <div class="field-group">
+    <label for="variant_key">Variant key</label>
+    <input
+      id="variant_key"
+      name="variant_key"
+      value="{{ form.variant_key }}"
+      maxlength="120"
+      {% if immutable_key %}readonly{% else %}required{% endif %}
+      {% if errors.variant_key %}aria-invalid="true"
+      aria-describedby="variant_key-errors"{% endif %}
+    >
+    {% if errors.variant_key %}
+      <ul class="field-errors" id="variant_key-errors">
+        {% for error in errors.variant_key %}<li>{{ error }}</li>{% endfor %}
+      </ul>
+    {% endif %}
+  </div>
+
+  <div class="field-group">
+    <label for="display_name">Display name</label>
+    <input
+      id="display_name"
+      name="display_name"
+      value="{{ form.display_name }}"
+      required
+      {% if errors.display_name %}aria-invalid="true"
+      aria-describedby="display_name-errors"{% endif %}
+    >
+    {% if errors.display_name %}
+      <ul class="field-errors" id="display_name-errors">
+        {% for error in errors.display_name %}<li>{{ error }}</li>{% endfor %}
+      </ul>
+    {% endif %}
+  </div>
+
+  <div class="field-group">
+    <label for="status">Lifecycle status</label>
+    <select id="status" name="status">
+      {% for status in statuses %}
+        <option value="{{ status }}"
+          {% if form.status == status %}selected{% endif %}>
+          {{ status }}
+        </option>
+      {% endfor %}
+    </select>
+    {% if errors.status %}
+      <ul class="field-errors">
+        {% for error in errors.status %}<li>{{ error }}</li>{% endfor %}
+      </ul>
+    {% endif %}
+    <p class="help-text">
+      Use archived to retire a Variant. Variants are not deleted.
+    </p>
+  </div>
+
+  <div class="field-group">
+    <label for="description">Description</label>
+    <textarea id="description" name="description"
+      class="metadata-textarea">{{ form.description }}</textarea>
+  </div>
+
+  <div class="form-actions">
+    <button type="submit">{{ submit_label }}</button>
+    <a class="button secondary"
+      href="{% if immutable_key %}/prompts/{{ prompt.prompt_key }}/variants/{{ form.variant_key }}{% else %}/prompts/{{ prompt.prompt_key }}{% endif %}">
+      Cancel
+    </a>
+  </div>
+</form>
+{% endblock %}
