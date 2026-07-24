@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}{{ hook.display_name }} | Prompt Admin{% endblock %}
+
+{% block content %}
+<section class="page-header">
+  <div>
+    <p class="eyebrow">Hook</p>
+    <h1>{{ hook.display_name }}</h1>
+    <p class="page-description"><code>{{ hook.hook_key }}</code></p>
+  </div>
+  <div class="page-actions">
+    {% if hook.deleted_at %}
+      <form method="post" action="/hooks/{{ hook.hook_key }}/restore">
+        <button type="submit">Restore Hook</button>
+      </form>
+    {% else %}
+      <a class="button" href="/hooks/{{ hook.hook_key }}/revisions/new">
+        Create Revision
+      </a>
+      <a class="button secondary" href="/hooks/{{ hook.hook_key }}/edit">
+        Edit Metadata
+      </a>
+      <form method="post" action="/hooks/{{ hook.hook_key }}/delete">
+        <button class="danger" type="submit">Soft-delete Hook</button>
+      </form>
+    {% endif %}
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <h2>Hook metadata</h2>
+    {% if hook.deleted_at %}
+      <span class="badge badge-deleted">deleted</span>
+    {% else %}
+      <span class="badge badge-active">active</span>
+    {% endif %}
+  </div>
+  <dl class="meta-list">
+    <div><dt>Stable key</dt><dd><code>{{ hook.hook_key }}</code></dd></div>
+    <div><dt>Category</dt><dd>{{ hook.category or "—" }}</dd></div>
+    <div><dt>Description</dt><dd>{{ hook.description or "—" }}</dd></div>
+    <div><dt>Created</dt><dd>{{ hook.created_at }}</dd></div>
+    <div><dt>Updated</dt><dd>{{ hook.updated_at }}</dd></div>
+    {% if hook.deleted_at %}
+      <div><dt>Deleted</dt><dd>{{ hook.deleted_at }}</dd></div>
+    {% endif %}
+  </dl>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <h2>Latest effective Revision</h2>
+      <p>The highest Revision number is the only effective Revision.</p>
+    </div>
+    {% if revisions %}
+      {% set latest = revisions[-1] %}
+      {% if hook.deleted_at %}
+        <span class="badge badge-disabled">not contributing</span>
+      {% elif latest.is_enabled %}
+        <span class="badge badge-enabled">enabled</span>
+      {% else %}
+        <span class="badge badge-disabled">disabled</span>
+      {% endif %}
+    {% else %}
+      <span class="badge badge-neutral">no Revision</span>
+    {% endif %}
+  </div>
+  {% if revisions %}
+    {% set latest = revisions[-1] %}
+    <dl class="meta-list">
+      <div>
+        <dt>Revision</dt>
+        <dd>
+          <a href="/hooks/{{ hook.hook_key }}/revisions/{{ latest.revision_number }}">
+            r{{ latest.revision_number }}
+          </a>
+        </dd>
+      </div>
+      <div><dt>Hook group</dt><dd><code>#{{ latest.hook_group }}</code></dd></div>
+      <div><dt>Priority</dt><dd>{{ latest.priority }}</dd></div>
+      <div>
+        <dt>Enabled flag</dt>
+        <dd>{{ "enabled" if latest.is_enabled else "disabled" }}</dd>
+      </div>
+    </dl>
+    {% if hook.deleted_at %}
+      <div class="alert alert-warning">
+        This Hook is deleted and does not contribute to compilation.
+      </div>
+    {% endif %}
+  {% else %}
+    <div class="empty-state">
+      No Revisions. Create the first immutable Revision to define behavior.
+    </div>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <h2>Revision history</h2>
+      <p>History is immutable and ordered by Revision number.</p>
+    </div>
+    <div class="row-actions">
+      {% if revisions|length >= 2 %}
+        <a class="button secondary" href="/hooks/{{ hook.hook_key }}/compare">
+          Compare Revisions
+        </a>
+      {% endif %}
+      {% if revisions %}
+        <a class="button secondary" href="/hooks/{{ hook.hook_key }}/impact">
+          View impact
+        </a>
+      {% endif %}
+    </div>
+  </div>
+  {% if revisions %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Revision</th>
+            <th scope="col">Hook group</th>
+            <th scope="col">Priority</th>
+            <th scope="col">Enabled</th>
+            <th scope="col">Change note</th>
+            <th scope="col">Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for revision in revisions %}
+            <tr>
+              <td>
+                <a href="/hooks/{{ hook.hook_key }}/revisions/{{ revision.revision_number }}">
+                  r{{ revision.revision_number }}
+                </a>
+                {% if loop.last %}<span class="badge badge-latest">latest</span>{% endif %}
+              </td>
+              <td><code>#{{ revision.hook_group }}</code></td>
+              <td>{{ revision.priority }}</td>
+              <td>{{ "yes" if revision.is_enabled else "no" }}</td>
+              <td>{{ revision.change_note or "—" }}</td>
+              <td>{{ revision.created_at }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty-state">No Hook Revisions.</div>
+  {% endif %}
+</section>
+{% endblock %}
