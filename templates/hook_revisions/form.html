@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Create Hook Revision | Prompt Admin{% endblock %}
+
+{% block content %}
+<section class="page-header">
+  <div>
+    <p class="eyebrow">Immutable Hook Revision</p>
+    <h1>Create Revision</h1>
+    <p class="page-description">
+      <a href="/hooks/{{ hook.hook_key }}"><code>{{ hook.hook_key }}</code></a>
+    </p>
+  </div>
+</section>
+
+{% if copied_from %}
+  <div class="alert alert-warning">
+    Values were copied from r{{ copied_from }}. Saving creates a new immutable
+    Revision.
+  </div>
+{% endif %}
+
+{% if error_summary %}
+  <div class="alert alert-error" role="alert">
+    <strong>Unable to create Revision.</strong> {{ error_summary }}
+  </div>
+{% endif %}
+
+<section class="panel form-panel">
+  <form method="post" action="/hooks/{{ hook.hook_key }}/revisions"
+    class="stacked-form">
+    <label for="hook-group">Hook group</label>
+    <div class="prefixed-field">
+      <span aria-hidden="true">#</span>
+      <input id="hook-group" name="hook_group"
+        value="{{ form.hook_group }}" required>
+    </div>
+    <p class="field-help">
+      Store the group without the leading <code>#</code>.
+    </p>
+    {% for message in errors.get("hook_group", []) %}
+      <p class="field-error">{{ message }}</p>
+    {% endfor %}
+
+    <label for="hook-content">Hook content</label>
+    <textarea id="hook-content" name="hook_content" rows="16"
+      required>{{ form.hook_content }}</textarea>
+    <p class="field-help">Whitespace is preserved exactly.</p>
+    {% for message in errors.get("hook_content", []) %}
+      <p class="field-error">{{ message }}</p>
+    {% endfor %}
+
+    <label for="priority">Priority</label>
+    <input id="priority" name="priority" type="number" min="0"
+      value="{{ form.priority }}" required>
+    <p class="field-help">Lower priorities compile first. Default: 100.</p>
+    {% for message in errors.get("priority", []) %}
+      <p class="field-error">{{ message }}</p>
+    {% endfor %}
+
+    <label class="checkbox-field" for="is-enabled">
+      <input id="is-enabled" name="is_enabled" type="checkbox"
+        {% if form.is_enabled %}checked{% endif %}>
+      Enabled effective contribution
+    </label>
+
+    <label for="change-note">Change note</label>
+    <textarea id="change-note" name="change_note"
+      rows="4">{{ form.change_note }}</textarea>
+    {% for message in errors.get("change_note", []) %}
+      <p class="field-error">{{ message }}</p>
+    {% endfor %}
+
+    <div class="form-actions">
+      <button type="submit">Create Immutable Revision</button>
+      <a class="button secondary" href="/hooks/{{ hook.hook_key }}">
+        Cancel
+      </a>
+    </div>
+  </form>
+</section>
+{% endblock %}
